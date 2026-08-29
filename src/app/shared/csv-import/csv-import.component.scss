@@ -1,0 +1,34 @@
+:host { display: block; }
+
+.ff { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.ff label {
+  font-size: 10px; text-transform: uppercase; color: var(--g40);
+  font-weight: 700; letter-spacing: 0.6px;
+}
+.ff textarea { min-height: 120px; }
+
+.hint { font-size: 12.5px; color: var(--t2); line-height: 1.6; margin: 0 0 12px; }
+.hint.warn {
+  background: var(--wl); border: 1px solid #f1cc74; color: var(--wd);
+  border-radius: 10px; padding: 10px 12px; font-weight: 500;
+}
+
+.actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+.progress-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.progress-title { font-weight: 700; font-size: 13px; color: var(--n); }
+.progress-track { height: 10px; background: var(--nl); border-radius: 6px; overflow: hidden; margin-bottom: 14px; }
+.progress-bar {
+  height: 100%; background: linear-gradient(90deg, var(--o), var(--om));
+  transition: width 0.15s ease;
+}
+
+.counters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.counters .stat { flex: 1; min-width: 104px; text-align: center; }
+.counters .v.ok { color: var(--gn); }
+.counters .v.warn { color: var(--wd); }
+.counters .v.soft { color: var(--g50); }
+.counters .v.bad { color: var(--r); }
+
+.live-box { max-height: 240px; overflow-y: auto; border: 1px solid var(--br); border-radius: 8px; }
+.live .muted { margin-top: 6px; }

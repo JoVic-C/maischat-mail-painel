@@ -1,0 +1,76 @@
+<app-page-title subtitle="Dados de acesso e segurança da sua conta">Minha conta</app-page-title>
+
+<div class="grid cols-2">
+  <div class="card">
+    <h3 class="card-title">Dados</h3>
+    <dl class="info">
+      <dt>Nome</dt>
+      <dd>{{ auth.currentUser?.name || '—' }}</dd>
+      <dt>Email</dt>
+      <dd>{{ auth.currentUser?.email }}</dd>
+      <dt>Papel</dt>
+      <dd>{{ roleLabel }}</dd>
+      <ng-container *ngIf="auth.isSuperadmin && auth.activeTenantName">
+        <dt>Operando em</dt>
+        <dd>{{ auth.activeTenantName }}</dd>
+      </ng-container>
+    </dl>
+
+    <h3 class="card-title spaced">Sessões</h3>
+    <p class="muted">
+      Encerra o acesso em todos os dispositivos, inclusive este. Use se achar que alguém tem seu token.
+    </p>
+    <app-button variant="outline" [loading]="revoking" (click)="logoutAll()">
+      Encerrar sessões em todos os dispositivos
+    </app-button>
+  </div>
+
+  <div class="card">
+    <h3 class="card-title">Trocar senha</h3>
+    <p class="muted">
+      Ao trocar a senha, as sessões abertas com a senha antiga são derrubadas. Você continua conectado aqui.
+    </p>
+
+    <form [formGroup]="form" (ngSubmit)="changePassword()">
+      <p class="error-msg" *ngIf="formError">{{ formError }}</p>
+
+      <div class="ff">
+        <label for="ac-current">Senha atual</label>
+        <input
+          id="ac-current"
+          type="password"
+          formControlName="currentPassword"
+          autocomplete="current-password"
+          [class.is-invalid]="serverErrors.has('currentPassword')"
+        />
+        <div class="field-error" *ngIf="fieldError('currentPassword')">{{ fieldError('currentPassword') }}</div>
+      </div>
+
+      <div class="ff">
+        <label for="ac-new">Nova senha</label>
+        <input
+          id="ac-new"
+          type="password"
+          formControlName="newPassword"
+          autocomplete="new-password"
+          [class.is-invalid]="serverErrors.has('newPassword')"
+        />
+        <div class="field-error" *ngIf="fieldError('newPassword')">{{ fieldError('newPassword') }}</div>
+      </div>
+
+      <div class="ff">
+        <label for="ac-confirm">Confirme a nova senha</label>
+        <input
+          id="ac-confirm"
+          type="password"
+          formControlName="confirmPassword"
+          autocomplete="new-password"
+          [class.is-invalid]="mismatch"
+        />
+        <div class="field-error" *ngIf="mismatch">As senhas não conferem.</div>
+      </div>
+
+      <app-button type="submit" variant="primary" [loading]="changing">Alterar senha</app-button>
+    </form>
+  </div>
+</div>

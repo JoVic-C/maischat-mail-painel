@@ -1,0 +1,20 @@
+<span class="logo" [class.only-mark]="variant === 'mark'" [style.font-size]="size">
+  <span class="word" *ngIf="variant === 'full'">m</span>
+
+  <svg class="mark" [class.brand]="markColor === 'brand'" viewBox="18 18 92 92" aria-hidden="true" focusable="false">
+    <!-- Bolha de conversa cujo recorte superior forma o "M". -->
+    <path
+      class="body"
+      d="M 28 76 Q 28 92 46 92 L 74 92 Q 92 92 92 76 L 92 42 Q 92 27 82 33 L 66 51 Q 60 57 54 51 L 38 33 Q 28 27 28 42 Z"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="12"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+    />
+    <path class="tail" d="M 90 76 L 105 102 C 95 100, 87 94, 82 85 Z" fill="currentColor" />
+  </svg>
+
+  <span class="word" *ngIf="variant === 'full'">ail</span>
+  <span class="sr-only">mMail</span>
+</span>

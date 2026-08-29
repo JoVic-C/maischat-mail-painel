@@ -1,0 +1,401 @@
+<div class="row-between">
+  <app-page-title subtitle="Disparo em lotes com tracking de aberturas e cliques">
+    Campanhas
+    <span class="live" *ngIf="liveRefreshOn">● atualizando em tempo real</span>
+  </app-page-title>
+  <app-button variant="primary" (click)="openCreate()">+ Nova campanha</app-button>
+</div>
+
+<div class="card">
+  <app-data-state
+    [loading]="loading"
+    [error]="error"
+    [empty]="!campaigns.length"
+    emptyText="Nenhuma campanha ainda. Crie a primeira!"
+    [skeletonCols]="6"
+    (retry)="load()"
+  >
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Status</th>
+            <th>Progresso</th>
+            <th>Aberturas</th>
+            <th>Cliques</th>
+            <th class="ta-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of campaigns">
+            <td>
+              <button type="button" class="link-name" (click)="viewDetail(c)" title="ver detalhes do disparo">
+                {{ c.name }}
+              </button>
+            </td>
+            <td>
+              <app-status-badge kind="campaign" [value]="c.status"></app-status-badge>
+              <div class="muted when" *ngIf="c.status === 'scheduled' && c.scheduledAt">🕑 {{ fmt(c.scheduledAt) }}</div>
+            </td>
+            <td class="progress-cell">
+              {{ c.stats.sent }}/{{ c.stats.total }}
+              <div class="progress" *ngIf="c.stats.total" aria-label="Progresso do envio">
+                <div
+                  class="bar"
+                  [style.width.%]="pct(c.stats.sent + c.stats.failed + c.stats.bounced, c.stats.total)"
+                ></div>
+              </div>
+            </td>
+            <td>
+              {{ c.stats.opened }}
+              <span class="muted" *ngIf="c.stats.sent">({{ pct(c.stats.opened, c.stats.sent) }}%)</span>
+            </td>
+            <td>
+              {{ c.stats.clicked }}
+              <span class="muted" *ngIf="c.stats.sent">({{ pct(c.stats.clicked, c.stats.sent) }}%)</span>
+            </td>
+            <td>
+              <div class="actions">
+                <!-- Ação principal, conforme o status -->
+                <app-button *ngIf="c.status === 'draft'" variant="success" size="sm" (click)="start(c)">
+                  ▶ disparar
+                </app-button>
+                <app-button *ngIf="c.status === 'draft'" variant="outline" size="sm" (click)="openSchedule(c)">
+                  🕑 agendar
+                </app-button>
+                <app-button *ngIf="c.status === 'sending'" variant="outline" size="sm" (click)="pause(c)">
+                  ⏸ pausar
+                </app-button>
+                <app-button *ngIf="c.status === 'paused'" variant="success" size="sm" (click)="resume(c)">
+                  ▶ retomar
+                </app-button>
+                <app-button *ngIf="c.status === 'scheduled'" variant="danger" size="sm" (click)="unschedule(c)">
+                  cancelar
+                </app-button>
+
+                <app-button variant="outline" size="sm" (click)="viewDetail(c)">detalhes</app-button>
+
+                <!-- Menu de ações secundárias -->
+                <div class="menu-wrap">
+                  <button
+                    type="button"
+                    class="btn btn-o btn-sm"
+                    (click)="toggleMenu(c._id, $event)"
+                    title="mais ações"
+                    aria-label="Mais ações"
+                    [attr.aria-expanded]="openMenuId === c._id"
+                  >
+                    ⋮
+                  </button>
+                  <div class="menu" *ngIf="openMenuId === c._id" role="menu">
+                    <button type="button" role="menuitem" *ngIf="canEdit(c)" (click)="openEdit(c); closeMenu()">
+                      ✎ Editar
+                    </button>
+                    <button type="button" role="menuitem" (click)="testSend(c); closeMenu()">✉ Enviar teste</button>
+                    <button type="button" role="menuitem" (click)="refresh(c); closeMenu()">↻ Atualizar métricas</button>
+                    <button type="button" role="menuitem" class="danger" (click)="remove(c); closeMenu()">
+                      🗑 Excluir
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </app-data-state>
+</div>
+
+<!-- Fecha o menu ao clicar fora -->
+<div class="menu-backdrop" *ngIf="openMenuId" (click)="closeMenu()"></div>
+
+<!-- Nova/editar campanha -->
+<app-modal
+  *ngIf="modal"
+  [title]="editingId ? 'Editar campanha' : 'Nova campanha'"
+  size="lg"
+  [busy]="saving"
+  (close)="modal = false"
+>
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <p class="error-msg" *ngIf="formError">{{ formError }}</p>
+
+    <div class="ff">
+      <label for="cp-name">Nome *</label>
+      <input
+        id="cp-name"
+        formControlName="name"
+        placeholder="Newsletter Julho"
+        [class.is-invalid]="serverErrors.has('name')"
+      />
+      <div class="field-error" *ngIf="fieldError('name')">{{ fieldError('name') }}</div>
+    </div>
+
+    <div class="ff">
+      <label for="cp-template">Template *</label>
+      <select id="cp-template" formControlName="templateId" [class.is-invalid]="serverErrors.has('templateId')">
+        <option value="">— selecione —</option>
+        <option *ngFor="let t of templates" [value]="t._id">{{ t.name }}</option>
+      </select>
+      <div class="field-error" *ngIf="fieldError('templateId')">{{ fieldError('templateId') }}</div>
+      <p class="hint sub" *ngIf="!templates.length">
+        Nenhum template cadastrado — crie um em <b>Templates</b> antes de disparar.
+      </p>
+    </div>
+
+    <div class="ff">
+      <label for="cp-lists">Listas de destinatários *</label>
+      <select id="cp-lists" multiple formControlName="listIds" class="multi" [class.is-invalid]="serverErrors.has('listIds')">
+        <option *ngFor="let l of lists" [value]="l._id">{{ l.name }} ({{ l.contactCount }})</option>
+      </select>
+      <div class="field-error" *ngIf="fieldError('listIds')">{{ fieldError('listIds') }}</div>
+      <p class="hint sub">Segure Ctrl para selecionar várias</p>
+    </div>
+
+    <div class="ff" *ngIf="isAdmin">
+      <label for="cp-smtp">Servidor SMTP</label>
+      <select id="cp-smtp" formControlName="smtpId">
+        <option [ngValue]="null">— usar o padrão —</option>
+        <option *ngFor="let s of smtps" [ngValue]="s.id">{{ s.name }}</option>
+      </select>
+    </div>
+
+    <div class="ff">
+      <label for="cp-segment">Segmento (filtro opcional)</label>
+      <select id="cp-segment" formControlName="segmentId">
+        <option [ngValue]="null">— sem filtro (todos das listas) —</option>
+        <option *ngFor="let sg of segments" [ngValue]="sg._id">{{ sg.name }}</option>
+      </select>
+      <p class="hint sub">Restringe os destinatários das listas às regras do segmento</p>
+    </div>
+
+    <div class="ff">
+      <label>Anexos (PDF, Word, Excel...)</label>
+      <div *ngFor="let a of attachments; let i = index" class="attach-row">
+        <span class="attach-name">📎 {{ a.filename }}</span>
+        <span class="muted">{{ fmtSize(a.size) }}</span>
+        <app-button variant="danger" size="sm" (click)="removeAttachment(i)">remover</app-button>
+      </div>
+      <app-button variant="outline" size="sm" [loading]="uploadingDoc" (click)="docInput.click()">
+        + Anexar arquivo
+      </app-button>
+      <input
+        #docInput
+        type="file"
+        hidden
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip"
+        (change)="onDocSelected($event, docInput)"
+      />
+    </div>
+  </form>
+
+  <ng-container modal-actions>
+    <app-button variant="outline" (click)="modal = false">Cancelar</app-button>
+    <app-button variant="primary" [loading]="saving" (click)="save()">
+      {{ editingId ? 'Salvar alterações' : 'Criar campanha' }}
+    </app-button>
+  </ng-container>
+</app-modal>
+
+<!-- Agendamento -->
+<app-modal *ngIf="scheduleModal" title="Agendar disparo" size="sm" [busy]="scheduling" (close)="scheduleModal = false">
+  <p class="hint">Campanha "{{ scheduleCampaignRef?.name }}" — escolha data e hora futuras.</p>
+  <div class="ff">
+    <label for="cp-when">Data e hora</label>
+    <input id="cp-when" type="datetime-local" [(ngModel)]="scheduleAt" [ngModelOptions]="{ standalone: true }" />
+  </div>
+
+  <ng-container modal-actions>
+    <app-button variant="outline" (click)="scheduleModal = false">Cancelar</app-button>
+    <app-button variant="primary" [loading]="scheduling" (click)="confirmSchedule()">Agendar</app-button>
+  </ng-container>
+</app-modal>
+
+<!-- Escopo do disparo -->
+<app-modal
+  *ngIf="scopeModal"
+  [title]="'Disparar &quot;' + scopeCampaign?.name + '&quot;'"
+  size="sm"
+  [busy]="starting"
+  (close)="scopeModal = false"
+>
+  <p>Para quem você quer enviar?</p>
+  <div class="scope-options">
+    <app-button variant="primary" [fullWidth]="true" [disabled]="starting" (click)="doStart(false)">
+      📧 Todos os contatos das listas
+    </app-button>
+    <app-button variant="outline" [fullWidth]="true" [disabled]="starting" (click)="doStart(true)">
+      📬 Só quem já recebeu antes (entregues)
+    </app-button>
+  </div>
+  <p class="hint sub">
+    <b>Entregues</b> = contatos que já receberam um envio com sucesso. Protege sua reputação e evita re-bater em quem
+    falhou/bloqueou.
+  </p>
+
+  <ng-container modal-actions>
+    <app-button variant="outline" (click)="scopeModal = false">Cancelar</app-button>
+  </ng-container>
+</app-modal>
+
+<!-- Detalhe do disparo -->
+<app-modal *ngIf="detailModal" [title]="detailCampaign?.name || 'Campanha'" size="xl" (close)="closeDetail()">
+  <p class="muted">
+    Resultado do disparo ·
+    <app-status-badge kind="campaign" [value]="detailCampaign?.status || ''"></app-status-badge>
+  </p>
+
+  <!-- Resumo -->
+  <div class="grid cols-4 summary">
+    <div class="stat">
+      <div class="v neutral">
+        {{ detailCampaign?.stats?.sent }}<span class="of">/{{ detailCampaign?.stats?.total }}</span>
+      </div>
+      <div class="k">Enviados</div>
+    </div>
+    <div class="stat">
+      <div class="v good">{{ detailCampaign?.stats?.opened }}</div>
+      <div class="k">Aberturas {{ ratePct(detailCampaign?.stats?.opened, detailCampaign?.stats?.sent) }}</div>
+    </div>
+    <div class="stat">
+      <div class="v">{{ detailCampaign?.stats?.clicked }}</div>
+      <div class="k">Cliques {{ ratePct(detailCampaign?.stats?.clicked, detailCampaign?.stats?.sent) }}</div>
+    </div>
+    <div class="stat">
+      <div class="v bad">{{ detailCampaign?.stats?.failed }}</div>
+      <div class="k">Falhas</div>
+    </div>
+    <div class="stat">
+      <div class="v bad">{{ detailCampaign?.stats?.bounced }}</div>
+      <div class="k">Bounces</div>
+    </div>
+    <div class="stat">
+      <div class="v warn">{{ detailCampaign?.stats?.unsubscribed }}</div>
+      <div class="k">Descadastros</div>
+    </div>
+  </div>
+
+  <div class="metric-legend">
+    <strong>ℹ️ O que significam as métricas</strong>
+    <ul>
+      <li><b>Enviados</b> — emails aceitos pelo servidor SMTP para entrega.</li>
+      <li><b>Aberturas / Cliques</b> — contatos que abriram o email ou clicaram em algum link.</li>
+      <li><b>Falhas</b> — erro <b>temporário</b> no envio (rede, limite do servidor); o sistema pode retentar.</li>
+      <li>
+        <b>Bounces</b> — o email <b>voltou (retornou)</b>: o endereço não existe, a caixa está cheia ou o servidor
+        recusou. É um erro <b>permanente</b> — o contato vira <span class="badge red">inválido</span> e
+        <b>não recebe mais campanhas</b>, para proteger a reputação de envio (higiene de lista).
+      </li>
+    </ul>
+  </div>
+
+  <div *ngIf="detailCampaign && detailCampaign.linkStats.length" class="links">
+    <h4>Links mais clicados</h4>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Link</th>
+            <th class="ta-right">Cliques</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let l of sortedLinks(detailCampaign.linkStats)">
+            <td class="url">
+              <a [href]="l.url" target="_blank" rel="noopener noreferrer">{{ l.url }}</a>
+            </td>
+            <td class="ta-right clicks">{{ l.clicks }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="logs-head">
+    <h4>Envios individuais</h4>
+    <select
+      [(ngModel)]="logStatusFilter"
+      [ngModelOptions]="{ standalone: true }"
+      (ngModelChange)="reloadLogs()"
+      aria-label="Filtrar envios por situação"
+    >
+      <option value="">Todas as situações</option>
+      <option value="sent">Entregues</option>
+      <option value="opened">Abertos</option>
+      <option value="clicked">Clicados</option>
+      <option value="failed">Falhas</option>
+      <option value="bounced">Bounces</option>
+      <option value="unsubscribed">Descadastros</option>
+      <option value="pending">Pendentes</option>
+    </select>
+  </div>
+
+  <app-data-state
+    [loading]="loadingLogs"
+    [error]="logsError"
+    [empty]="!logs.length"
+    [emptyText]="logsEmptyText"
+    [skeletonCols]="6"
+    (retry)="loadLogs()"
+  >
+    <div class="logs-box">
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Destinatário</th>
+              <th>Situação</th>
+              <th>Abriu</th>
+              <th>Clicou</th>
+              <th>Enviado em</th>
+              <th class="ta-right" *ngIf="isAdmin">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let l of logs">
+              <td class="email">{{ l.email }}</td>
+              <td>
+                <app-status-badge kind="send" [value]="l.status"></app-status-badge>
+                <div
+                  class="err-line"
+                  *ngIf="(l.status === 'failed' || l.status === 'bounced') && l.bounceInfo"
+                  [title]="'Erro técnico: ' + l.error"
+                >
+                  <b>{{ l.bounceInfo.title }}</b>
+                  <span>{{ l.bounceInfo.explain }}</span>
+                </div>
+              </td>
+              <td>{{ l.openCount ? '✓ ' + l.openCount + '×' : '—' }}</td>
+              <td>{{ l.clickCount ? '✓ ' + l.clickCount + '×' : '—' }}</td>
+              <td class="muted">{{ l.sentAt ? fmt(l.sentAt) : '—' }}</td>
+              <td class="ta-right" *ngIf="isAdmin">
+                <app-button
+                  *ngIf="l.status !== 'bounced'"
+                  variant="danger"
+                  size="sm"
+                  title="marcar o endereço como inválido (bounce)"
+                  (click)="markBounce(l)"
+                >
+                  bounce
+                </app-button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <app-paginator
+      [page]="logsPage"
+      [total]="logsTotal"
+      [limit]="logsLimit"
+      (pageChange)="goToLogsPage($event)"
+    ></app-paginator>
+  </app-data-state>
+
+  <ng-container modal-actions>
+    <app-button variant="primary" (click)="closeDetail()">Fechar</app-button>
+  </ng-container>
+</app-modal>

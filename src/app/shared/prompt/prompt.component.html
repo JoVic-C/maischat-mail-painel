@@ -1,0 +1,22 @@
+<app-modal *ngIf="svc.state" [title]="svc.state.title" size="sm" (close)="svc.resolve(null)">
+  <p *ngIf="svc.state.message" style="white-space:pre-line">{{ svc.state.message }}</p>
+
+  <div class="ff">
+    <label for="prompt-input">{{ svc.state.label }}</label>
+    <input
+      #input
+      id="prompt-input"
+      [type]="svc.state.type"
+      [(ngModel)]="svc.value"
+      [placeholder]="svc.state.placeholder"
+      (keydown.enter)="submit()"
+    />
+  </div>
+
+  <ng-container modal-actions>
+    <app-button variant="outline" (click)="svc.resolve(null)">Cancelar</app-button>
+    <app-button variant="primary" [disabled]="!svc.value.trim()" (click)="submit()">
+      {{ svc.state.confirmLabel }}
+    </app-button>
+  </ng-container>
+</app-modal>

@@ -1,0 +1,23 @@
+.head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.filters {
+  margin-bottom: 14px; padding: 12px 16px;
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+}
+.filters .search { flex: 1; min-width: 200px; }
+.filters select { max-width: 200px; }
+
+.bulk-bar {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--ol); border: 1px solid #FFD9C7; border-radius: 12px;
+  padding: 10px 16px; margin-bottom: 14px;
+  font-size: 13px; color: var(--t2); animation: modal-in 0.18s ease;
+}
+.bulk-bar span { flex: 1; }
+
+.check-col { width: 34px; }
+.check-col input { width: auto; }
+.email { font-weight: 600; }
+tr.row-selected td { background: var(--oxl); }
+
+.multi { min-height: 90px; }

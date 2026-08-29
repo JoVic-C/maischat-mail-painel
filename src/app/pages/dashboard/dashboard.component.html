@@ -1,0 +1,134 @@
+<app-page-title subtitle="Visão geral do sistema em tempo real">Dashboard</app-page-title>
+
+<!-- Erro nos indicadores: uma tentativa clara em vez de números vazios para sempre -->
+<div class="state-error" *ngIf="statsError" role="alert" style="margin-bottom:16px">
+  <span class="ico" aria-hidden="true">⚠️</span>
+  <div class="txt">
+    <strong>Não foi possível carregar os indicadores</strong>
+    <span>{{ statsError }}</span>
+  </div>
+  <app-button variant="outline" size="sm" (click)="loadStats()">↻ Tentar novamente</app-button>
+</div>
+
+<div class="grid cols-4" style="margin-bottom:16px" [class.is-loading]="loadingStats">
+  <div class="stat hl">
+    <div class="v">{{ loadingStats ? '—' : (stats?.activeContacts ?? '—') }}</div>
+    <div class="k">Contatos ativos</div>
+  </div>
+  <div class="stat">
+    <div class="v">{{ loadingStats ? '—' : (stats?.emailsSent ?? '—') }}</div>
+    <div class="k">Emails enviados</div>
+  </div>
+  <div class="stat">
+    <div class="v">{{ loadingStats ? '—' : (stats?.openRate ?? 0) }}%</div>
+    <div class="k">Taxa de abertura</div>
+  </div>
+  <div class="stat">
+    <div class="v">{{ loadingStats ? '—' : (stats?.clickRate ?? 0) }}%</div>
+    <div class="k">Taxa de cliques</div>
+  </div>
+</div>
+
+<div class="grid cols-4" style="margin-bottom:20px" [class.is-loading]="loadingStats">
+  <div class="stat">
+    <div class="v" style="color:var(--n)">{{ loadingStats ? '—' : (stats?.totalContacts ?? '—') }}</div>
+    <div class="k">Total de contatos</div>
+  </div>
+  <div class="stat">
+    <div class="v" style="color:var(--n)">{{ loadingStats ? '—' : (stats?.totalLists ?? '—') }}</div>
+    <div class="k">Listas</div>
+  </div>
+  <div class="stat">
+    <div class="v" style="color:var(--n)">{{ loadingStats ? '—' : (stats?.totalCampaigns ?? '—') }}</div>
+    <div class="k">Campanhas</div>
+  </div>
+  <div class="stat">
+    <div class="v" style="color:var(--n)">{{ loadingStats ? '—' : (stats?.recentCampaigns?.length ?? '—') }}</div>
+    <div class="k">Recentes</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <h3 style="font-size:15px;font-weight:800;color:var(--n);margin-bottom:6px">Atividade (30 dias)</h3>
+
+    <div class="act-metrics">
+      <span><b style="color:var(--o)">{{ totals.sent }}</b> enviados</span>
+      <span><b style="color:var(--gn)">{{ totals.opened }}</b> aberturas</span>
+      <span><b style="color:var(--od)">{{ totals.clicked }}</b> cliques</span>
+      <span><b style="color:var(--r)">{{ totals.failed }}</b> falhas</span>
+    </div>
+
+    <app-data-state
+      [loading]="loadingActivity"
+      [error]="activityError"
+      [empty]="!activity.length"
+      emptyText="Sem atividade ainda. Dispare uma campanha!"
+      [skeletonRows]="4"
+      [skeletonCols]="6"
+      (retry)="loadActivity()"
+    >
+      <div class="chart">
+        <div class="col" *ngFor="let a of activity">
+          <div class="col-bar" [style.height.%]="barHeight(a.sent)"></div>
+          <div class="col-tip">
+            <span class="tip-date">{{ a.date.slice(8, 10) }}/{{ a.date.slice(5, 7) }}</span>
+            <span><b style="color:#FFB185">{{ a.sent }}</b> enviados</span>
+            <span><b style="color:#6ee7b7">{{ a.opened }}</b> aberturas</span>
+            <span><b style="color:#fca5a5">{{ a.clicked }}</b> cliques</span>
+          </div>
+        </div>
+      </div>
+      <p class="muted" style="margin-top:10px">Barras = emails enviados por dia · passe o mouse para ver o detalhe</p>
+    </app-data-state>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size:15px;font-weight:800;color:var(--n);margin-bottom:14px">Campanhas recentes</h3>
+
+    <app-data-state
+      [loading]="loadingStats"
+      [error]="statsError"
+      [empty]="!stats?.recentCampaigns?.length"
+      emptyText="Nenhuma campanha ainda."
+      [skeletonRows]="4"
+      [skeletonCols]="5"
+      (retry)="loadStats()"
+    >
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Campanha</th>
+              <th>Status</th>
+              <th>Enviados</th>
+              <th>Aberturas</th>
+              <th>Cliques</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let c of stats?.recentCampaigns"
+              class="camp-row"
+              [routerLink]="['/campaigns']"
+              [queryParams]="{ open: c._id }"
+              title="abrir campanha"
+            >
+              <td style="font-weight:600;color:var(--o)">{{ c.name }}</td>
+              <td><app-status-badge kind="campaign" [value]="c.status"></app-status-badge></td>
+              <td>{{ c.stats.sent }}/{{ c.stats.total }}</td>
+              <td>
+                {{ c.stats.opened }}
+                <span class="muted" *ngIf="c.stats.sent">({{ pct(c.stats.opened, c.stats.sent) }}%)</span>
+              </td>
+              <td>
+                {{ c.stats.clicked }}
+                <span class="muted" *ngIf="c.stats.sent">({{ pct(c.stats.clicked, c.stats.sent) }}%)</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </app-data-state>
+  </div>
+</div>

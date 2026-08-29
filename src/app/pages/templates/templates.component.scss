@@ -1,0 +1,42 @@
+.name { font-weight: 600; }
+.var { margin-right: 4px; }
+
+.editor-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.editor-head label { margin: 0; }
+
+.toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+  border: 1px solid var(--br); border-bottom: none; border-radius: 8px 8px 0 0;
+  background: var(--oxl); padding: 6px 8px;
+}
+.toolbar button {
+  background: #fff; border: 1px solid var(--br); border-radius: 6px;
+  min-width: 30px; height: 30px; padding: 0 8px; cursor: pointer;
+  font-size: 13px; color: var(--t); font-family: inherit;
+}
+.toolbar button:hover:not(:disabled) { background: var(--ol); border-color: var(--om); }
+.toolbar .sep { width: 1px; height: 20px; background: var(--br); margin: 0 4px; }
+.toolbar .vlabel { font-size: 11px; color: var(--g50); font-weight: 600; }
+.toolbar .vbtn { font-size: 11px; color: var(--od); font-weight: 700; background: var(--ol); }
+
+.wysiwyg {
+  border: 1px solid var(--br); border-radius: 0 0 8px 8px; padding: 14px;
+  min-height: 160px; max-height: 320px; overflow-y: auto; background: #fff;
+  font-size: 14px; line-height: 1.6; color: var(--t); outline: none;
+}
+.wysiwyg:focus { border-color: var(--o); box-shadow: 0 0 0 3px rgba(255, 80, 0, 0.14); }
+.wysiwyg.is-invalid { border-color: var(--r); background: var(--rl); }
+.wysiwyg h1 { font-size: 22px; margin: 0 0 8px; }
+.wysiwyg h2 { font-size: 18px; margin: 0 0 6px; }
+.wysiwyg p { margin: 0 0 8px; }
+.wysiwyg a { color: var(--o); }
+.wysiwyg img { max-width: 100%; border-radius: 6px; }
+.wysiwyg:empty::before { content: 'Escreva o conteúdo do seu email aqui...'; color: var(--g70); }
+
+.html-editor { min-height: 150px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+
+.preview {
+  background: var(--oxl); border: 1px solid var(--br); border-radius: 12px;
+  padding: 16px; max-height: 320px; overflow-y: auto;
+}
+.preview img { max-width: 100%; }

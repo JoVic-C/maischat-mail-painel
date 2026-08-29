@@ -1,0 +1,172 @@
+<div class="row-between">
+  <app-page-title [subtitle]="total + ' contato(s) · busca por nome, email ou empresa'">Contatos</app-page-title>
+
+  <div class="head-actions">
+    <app-button variant="outline" (click)="openImport()">Importar CSV</app-button>
+    <app-button variant="primary" (click)="openCreate()">+ Novo contato</app-button>
+  </div>
+</div>
+
+<div class="card filters">
+  <input
+    class="search"
+    [(ngModel)]="search"
+    (ngModelChange)="onSearch()"
+    placeholder="🔍 Buscar contatos..."
+    aria-label="Buscar contatos"
+  />
+  <select [(ngModel)]="listFilter" (ngModelChange)="reload()" aria-label="Filtrar por lista">
+    <option value="">Todas as listas</option>
+    <option *ngFor="let l of lists" [value]="l._id">{{ l.name }}</option>
+  </select>
+  <select [(ngModel)]="statusFilter" (ngModelChange)="reload()" aria-label="Filtrar por status">
+    <option value="">Todos os status</option>
+    <option value="active">✅ Ativos</option>
+    <option value="bounced">❌ Bounce</option>
+    <option value="unsubscribed">🚫 Descadastrados</option>
+  </select>
+  <select [(ngModel)]="deliveryFilter" (ngModelChange)="reload()" aria-label="Filtrar por entrega">
+    <option value="">Toda entrega</option>
+    <option value="delivered">📬 Entregues</option>
+    <option value="never">◻️ Nunca entregaram</option>
+    <option value="undeliverable">🚫 Não-entregáveis</option>
+  </select>
+</div>
+
+<!-- Barra de ação em lote: aparece quando há seleção -->
+<div class="bulk-bar" *ngIf="selectedIds.size">
+  <span>
+    <b>{{ selectedIds.size }}</b> contato(s) selecionado(s)
+  </span>
+  <app-button variant="ghost" size="sm" (click)="clearSelection()">limpar seleção</app-button>
+  <app-button variant="danger" size="sm" [loading]="bulkDeleting" (click)="bulkDelete()">
+    🗑 Excluir selecionados
+  </app-button>
+</div>
+
+<div class="card">
+  <app-data-state
+    [loading]="loading"
+    [error]="error"
+    [empty]="!contacts.length"
+    [emptyText]="emptyText"
+    [skeletonCols]="6"
+    (retry)="load()"
+  >
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th class="check-col">
+              <input
+                type="checkbox"
+                [checked]="allSelected"
+                [indeterminate]="someSelected"
+                (change)="toggleAll()"
+                aria-label="Selecionar todos os contatos da página"
+              />
+            </th>
+            <th>Email</th>
+            <th>Nome</th>
+            <th>Empresa</th>
+            <th>Status</th>
+            <th>Recebeu</th>
+            <th class="ta-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of contacts" [class.row-selected]="selectedIds.has(c._id)">
+            <td class="check-col">
+              <input
+                type="checkbox"
+                [checked]="selectedIds.has(c._id)"
+                (change)="toggleOne(c)"
+                [attr.aria-label]="'Selecionar ' + c.email"
+              />
+            </td>
+            <td class="email">{{ c.email }}</td>
+            <td>{{ c.name || '—' }}</td>
+            <td class="muted">{{ c.company || '—' }}</td>
+            <td><app-status-badge kind="contact" [value]="c.status"></app-status-badge></td>
+            <td class="muted" [title]="deliveryHint(c)">
+              {{ c.lastDeliveredAt ? '✓ ' + fmtDate(c.lastDeliveredAt) : '—' }}
+            </td>
+            <td class="ta-right row-actions">
+              <app-button *ngIf="c.status !== 'active'" variant="outline" size="sm" (click)="reactivate(c)">
+                ↺ Reativar
+              </app-button>
+              <app-button variant="outline" size="sm" (click)="openEdit(c)">editar</app-button>
+              <app-button variant="danger" size="sm" (click)="remove(c)">excluir</app-button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <app-paginator [page]="page" [total]="total" [limit]="limit" (pageChange)="goToPage($event)"></app-paginator>
+  </app-data-state>
+</div>
+
+<!-- Novo/editar contato -->
+<app-modal
+  *ngIf="modal"
+  [title]="editingId ? 'Editar contato' : 'Novo contato'"
+  [busy]="saving"
+  (close)="modal = false"
+>
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <p class="error-msg" *ngIf="formError">{{ formError }}</p>
+
+    <div class="ff">
+      <label for="ct-email">Email *</label>
+      <input
+        id="ct-email"
+        type="email"
+        formControlName="email"
+        placeholder="contato@empresa.com"
+        [class.is-invalid]="serverErrors.has('email')"
+      />
+      <div class="field-error" *ngIf="fieldError('email')">{{ fieldError('email') }}</div>
+    </div>
+
+    <div class="rw">
+      <div class="ff">
+        <label for="ct-name">Nome</label>
+        <input id="ct-name" formControlName="name" />
+      </div>
+      <div class="ff">
+        <label for="ct-company">Empresa</label>
+        <input id="ct-company" formControlName="company" />
+      </div>
+    </div>
+
+    <div class="ff">
+      <label for="ct-phone">Telefone</label>
+      <input id="ct-phone" formControlName="phone" placeholder="(11) 90000-0000" />
+    </div>
+
+    <div class="ff">
+      <label for="ct-lists">Listas</label>
+      <select id="ct-lists" multiple formControlName="lists" class="multi">
+        <option *ngFor="let l of lists" [value]="l._id">{{ l.name }}</option>
+      </select>
+      <p class="hint sub">Segure Ctrl para selecionar várias</p>
+    </div>
+  </form>
+
+  <ng-container modal-actions>
+    <app-button variant="outline" (click)="modal = false">Cancelar</app-button>
+    <app-button variant="primary" [loading]="saving" (click)="save()">Salvar</app-button>
+  </ng-container>
+</app-modal>
+
+<!-- Importar CSV (widget compartilhado) -->
+<app-modal
+  *ngIf="importModal"
+  title="Importar e higienizar CSV"
+  size="lg"
+  [dismissOnBackdrop]="false"
+  (close)="closeImport()"
+>
+  <app-csv-import [lists]="lists" (finished)="onImported()" (cancel)="closeImport()"></app-csv-import>
+</app-modal>

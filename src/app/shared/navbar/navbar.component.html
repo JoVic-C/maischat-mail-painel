@@ -1,0 +1,38 @@
+<nav class="navbar">
+  <a class="nav-brand" routerLink="/dashboard" aria-label="mMail — ir para o dashboard">
+    <app-logo variant="full" size="21px" markColor="brand"></app-logo>
+  </a>
+
+  <div class="nav-links">
+    <ng-container *ngIf="auth.hasTenantContext">
+      <a routerLink="/dashboard" routerLinkActive="active">dashboard</a>
+      <a routerLink="/lists" routerLinkActive="active">listas</a>
+      <a routerLink="/contacts" routerLinkActive="active">contatos</a>
+      <a routerLink="/templates" routerLinkActive="active">templates</a>
+      <a routerLink="/campaigns" routerLinkActive="active">campanhas</a>
+      <a routerLink="/segments" routerLinkActive="active">segmentos</a>
+      <!-- SMTP e equipe são administração do cliente -->
+      <a *ngIf="auth.isAdmin" routerLink="/smtp" routerLinkActive="active">smtp</a>
+      <a *ngIf="auth.isAdmin" routerLink="/equipe" routerLinkActive="active">equipe</a>
+    </ng-container>
+    <!-- Administração da plataforma -->
+    <a *ngIf="auth.isSuperadmin" routerLink="/clientes" routerLinkActive="active">clientes</a>
+    <a *ngIf="auth.isSuperadmin" routerLink="/operacao" routerLinkActive="active">operação</a>
+    <a *ngIf="auth.isSuperadmin" routerLink="/plataforma" routerLinkActive="active">motor de envio</a>
+  </div>
+
+  <div class="nav-user">
+    <!-- Modo "operando em X": precisa parecer um estado ativo com saída, não um rótulo. -->
+    <span class="tenant" *ngIf="auth.isSuperadmin && auth.activeTenantName">
+      <span class="t-label">operando em</span>
+      <span class="t-name" [title]="auth.activeTenantName">{{ auth.activeTenantName }}</span>
+      <button type="button" class="t-exit" (click)="exitTenant()" title="Sair deste cliente" aria-label="Sair deste cliente">
+        ✕
+      </button>
+    </span>
+    <a class="user" routerLink="/conta" routerLinkActive="active" *ngIf="auth.currentUser">
+      {{ auth.currentUser.name || auth.currentUser.email }}
+    </a>
+    <button class="logout" (click)="auth.logout()">sair</button>
+  </div>
+</nav>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="18 18 92 92" width="92" height="92">
+  <!-- Marca mMail: bolha de conversa cujo recorte superior forma o "M". -->
+  <g fill="#FF5000">
+    <path d="M 28 76 Q 28 92 46 92 L 74 92 Q 92 92 92 76 L 92 42 Q 92 27 82 33 L 66 51 Q 60 57 54 51 L 38 33 Q 28 27 28 42 Z"
+          fill="none" stroke="#FF5000" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M 90 76 L 105 102 C 95 100, 87 94, 82 85 Z"/>
+  </g>
+</svg>

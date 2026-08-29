@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.angular/
+*.log
+
+# Playwright
+playwright.config.ts
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

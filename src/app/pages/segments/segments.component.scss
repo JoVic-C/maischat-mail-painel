@@ -1,0 +1,14 @@
+.name { font-weight: 600; }
+.rules { max-width: 320px; }
+
+.rule { display: flex; gap: 6px; margin-bottom: 6px; align-items: center; }
+.rule select:first-child { flex: 1.2; }
+.rule select + select { flex: 0.8; }
+.rule input { flex: 1; }
+
+@media (max-width: 560px) {
+  .rule { flex-wrap: wrap; }
+  .rule select,
+  .rule input { flex: 1 1 100%; }
+}
+.regra-erro { white-space: nowrap; align-self: center; }

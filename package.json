@@ -1,0 +1,41 @@
+{
+  "name": "mmail-frontend",
+  "version": "0.1.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "build:prod": "ng build --configuration production",
+    "e2e:install": "playwright install chromium",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report",
+    "audit:ci": "npm audit --omit=dev --audit-level=high",
+    "audit:full": "npm audit",
+    "verify": "npm run build && npm run test:e2e"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/animations": "^20.3.29",
+    "@angular/common": "^20.3.29",
+    "@angular/compiler": "^20.3.29",
+    "@angular/core": "^20.3.29",
+    "@angular/forms": "^20.3.29",
+    "@angular/platform-browser": "^20.3.29",
+    "@angular/platform-browser-dynamic": "^20.3.29",
+    "@angular/router": "^20.3.29",
+    "dompurify": "^3.4.14",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.6.0",
+    "zone.js": "~0.15.1"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^20.3.34",
+    "@angular/cli": "^20.3.34",
+    "@angular/compiler-cli": "^20.3.29",
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.3.0",
+    "typescript": "~5.8.3"
+  }
+}

@@ -1,0 +1,16 @@
+<app-skeleton *ngIf="loading" [rows]="skeletonRows" [cols]="skeletonCols"></app-skeleton>
+
+<div class="state-error" *ngIf="!loading && error" role="alert">
+  <span class="ico" aria-hidden="true">⚠️</span>
+  <div class="txt">
+    <strong>Não foi possível carregar</strong>
+    <span>{{ error }}</span>
+  </div>
+  <app-button variant="outline" size="sm" (click)="retry.emit()">↻ Tentar novamente</app-button>
+</div>
+
+<app-empty-state *ngIf="!loading && !error && empty">{{ emptyText }}</app-empty-state>
+
+<ng-container *ngIf="!loading && !error && !empty">
+  <ng-content></ng-content>
+</ng-container>

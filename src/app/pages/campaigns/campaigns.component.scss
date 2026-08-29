@@ -1,0 +1,79 @@
+.live { color: var(--gn); font-weight: 700; margin-left: 8px; font-size: 12px; }
+
+.when { font-size: 11px; margin-top: 3px; }
+.progress-cell { min-width: 140px; }
+.progress { height: 5px; background: var(--nl); border-radius: 4px; overflow: hidden; margin-top: 5px; }
+.progress .bar { height: 100%; background: var(--o); transition: width 0.4s ease; }
+
+.actions { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+
+.link-name {
+  color: var(--o); font-weight: 700; cursor: pointer; background: none;
+  border: none; padding: 0; font-family: inherit; font-size: 13px; text-align: left;
+}
+.link-name:hover { text-decoration: underline; }
+
+/* ── Menu de ações secundárias ── */
+.menu-wrap { position: relative; }
+.menu {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 40;
+  background: #fff; border: 1px solid var(--br); border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(20, 18, 31, 0.14); padding: 5px; min-width: 190px;
+}
+.menu button {
+  display: block; width: 100%; text-align: left; background: none; border: none;
+  padding: 9px 12px; border-radius: 7px; font-family: inherit; font-size: 13px;
+  font-weight: 600; color: var(--t); cursor: pointer;
+}
+.menu button:hover { background: var(--oxl); }
+.menu button.danger { color: var(--r); }
+.menu button.danger:hover { background: var(--rl); }
+.menu-backdrop { position: fixed; inset: 0; z-index: 30; }
+
+/* ── Detalhe do disparo ── */
+.summary { margin-bottom: 4px; }
+.summary .v.neutral { color: var(--n); }
+.summary .v.good { color: var(--gn); }
+.summary .v.bad { color: var(--r); }
+.summary .v.warn { color: var(--wd); }
+.summary .of { font-size: 14px; color: var(--g50); }
+
+.metric-legend {
+  background: var(--oxl); border: 1px solid var(--br); border-radius: 12px;
+  padding: 14px 16px; font-size: 12.5px; color: var(--t2);
+}
+.metric-legend strong { display: block; color: var(--n); font-size: 13px; margin-bottom: 8px; }
+.metric-legend ul { margin: 0; padding-left: 18px; }
+.metric-legend li { margin-bottom: 5px; line-height: 1.5; }
+.metric-legend .badge { vertical-align: middle; }
+
+.links h4,
+.logs-head h4 { font-size: 14px; font-weight: 800; color: var(--n); margin: 0 0 10px; }
+.links .url { max-width: 520px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.links .url a { color: var(--o); text-decoration: none; }
+.links .clicks { font-weight: 700; }
+
+.logs-head {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 4px;
+}
+.logs-head h4 { margin: 0; }
+.logs-head select { max-width: 190px; }
+
+.logs-box { max-height: 320px; overflow-y: auto; }
+.logs-box .email { font-weight: 600; }
+
+.err-line {
+  color: var(--r); font-size: 11px; margin-top: 3px; max-width: 260px;
+}
+.err-line span { display: block; font-size: 11px; opacity: 0.85; }
+
+/* ── Formulário ── */
+.multi { min-height: 90px; }
+.attach-row {
+  display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+  background: var(--oxl); border: 1px solid var(--br); border-radius: 8px;
+  margin-bottom: 5px; font-size: 12.5px;
+}
+.attach-name { flex: 1; font-weight: 600; color: var(--n); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.scope-options { display: flex; flex-direction: column; gap: 10px; }

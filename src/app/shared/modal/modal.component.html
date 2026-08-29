@@ -1,0 +1,22 @@
+<div class="modal-backdrop" (click)="onBackdropClick()">
+  <div
+    class="modal"
+    [class]="'size-' + size + ' variant-' + variant"
+    (click)="$event.stopPropagation()"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="title"
+  >
+    <div class="modal-head" *ngIf="title">
+      <span class="modal-icon" *ngIf="titleIcon" aria-hidden="true">{{ titleIcon }}</span>
+      <h3>{{ title }}</h3>
+      <button type="button" class="x" (click)="onCloseClick()" [disabled]="busy" aria-label="Fechar">×</button>
+    </div>
+    <div class="modal-body">
+      <ng-content></ng-content>
+    </div>
+    <div class="modal-actions">
+      <ng-content select="[modal-actions]"></ng-content>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,85 @@
+/* sticky em vez de fixed: a barra cresce no mobile sem sobrepor o conteúdo. */
+:host { display: block; position: sticky; top: 0; z-index: 100; }
+
+/* Grid de 3 colunas em vez de space-between: as laterais dividem o espaço que sobra
+   igualmente, então o menu fica no centro REAL da tela — não onde a marca e o bloco
+   do usuário deixaram sobrar. */
+.navbar {
+  height: 72px;
+  background: var(--nd);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0 26px;
+  gap: 16px;
+}
+
+/* min-width: 0 nas laterais — sem isso o conteúdo impõe a largura da coluna e o
+   menu do meio sai do centro quando o nome do cliente é longo. */
+.nav-brand { display: flex; align-items: center; text-decoration: none; color: #fff; min-width: 0; }
+.nav-brand:hover { opacity: 0.9; }
+
+.nav-links { display: flex; gap: 4px; justify-content: center; }
+.nav-links a {
+  color: rgba(255, 255, 255, 0.65); font-size: 13.5px; font-weight: 600;
+  text-transform: lowercase; text-decoration: none; padding: 8px 14px;
+  border-radius: 7px; transition: all 0.18s;
+}
+.nav-links a:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.nav-links a.active { background: var(--o); color: #fff; }
+
+.nav-user { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
+.nav-user .tenant {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--om); font-size: 12px; font-weight: 700;
+  background: rgba(255, 138, 82, 0.16); border: 1px solid rgba(255, 138, 82, 0.35);
+  padding: 4px 6px 4px 10px; border-radius: 20px;
+}
+
+/* "operando em" em caixa baixa e discreto: o nome do cliente é o que importa. */
+.nav-user .t-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+  color: rgba(255, 138, 82, 0.75);
+}
+
+/* Saber EM QUAL cliente se está operando é a informação que evita agir na base errada,
+   então o nome aparece inteiro — os 150px anteriores cortavam até nomes curtos.
+   O teto largo existe só para um nome fora do comum não empurrar o menu do centro;
+   passando dele, o nome inteiro continua no title. */
+.nav-user .t-name { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.nav-user .t-exit {
+  border: 0; background: rgba(255, 255, 255, 0.12); color: var(--om);
+  width: 18px; height: 18px; border-radius: 50%; cursor: pointer;
+  font-size: 10px; line-height: 1; display: grid; place-items: center;
+  font-family: inherit; transition: background 0.15s, color 0.15s;
+}
+.nav-user .t-exit:hover { background: var(--o); color: #fff; }
+.nav-user .user {
+  color: rgba(255, 255, 255, 0.85); font-size: 13px; font-weight: 600;
+  text-decoration: none; padding: 6px 10px; border-radius: 7px;
+}
+.nav-user .user:hover,
+.nav-user .user.active { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.nav-user .logout {
+  background: rgba(255, 255, 255, 0.1); color: #fff; border: none; padding: 6px 14px;
+  border-radius: 7px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+}
+.nav-user .logout:hover { background: rgba(255, 255, 255, 0.2); }
+
+@media (max-width: 1080px) {
+  /* Em telas estreitas o menu desce para uma linha própria e rola na horizontal. */
+  .navbar {
+    grid-template-columns: auto 1fr;
+    grid-template-areas: 'brand user' 'links links';
+    height: auto;
+    padding: 10px 16px;
+    gap: 8px;
+  }
+  .nav-brand { grid-area: brand; }
+  .nav-user { grid-area: user; }
+  .nav-links { grid-area: links; width: 100%; overflow-x: auto; justify-content: flex-start; }
+  /* No mobile a barra é estreita: aí sim corta, mas com folga e com o nome inteiro no title. */
+  .nav-user .t-name { max-width: 38vw; overflow: hidden; text-overflow: ellipsis; }
+}

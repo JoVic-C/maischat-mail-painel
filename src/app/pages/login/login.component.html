@@ -1,0 +1,83 @@
+<div class="auth">
+  <div class="auth-card">
+    <app-logo class="brand" variant="full" size="34px" markColor="brand"></app-logo>
+
+
+    <!-- Login -->
+    <ng-container *ngIf="!forgotMode">
+    <p class="sub">Entre para acessar o painel</p>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <p class="error-msg" *ngIf="formError">{{ formError }}</p>
+
+      <div class="field">
+        <label for="lg-email">Email</label>
+        <input
+          id="lg-email"
+          type="email"
+          formControlName="email"
+          placeholder="voce@empresa.com"
+          autocomplete="username"
+          [class.is-invalid]="serverErrors.has('email')"
+        />
+        <div class="field-error" *ngIf="fieldError('email')">{{ fieldError('email') }}</div>
+      </div>
+
+      <div class="field">
+        <label for="lg-password">Senha</label>
+        <input
+          id="lg-password"
+          type="password"
+          formControlName="password"
+          placeholder="••••••••"
+          autocomplete="current-password"
+          [class.is-invalid]="serverErrors.has('password')"
+        />
+        <div class="field-error" *ngIf="fieldError('password')">{{ fieldError('password') }}</div>
+      </div>
+
+      <app-button type="submit" variant="primary" [fullWidth]="true" [loading]="loading">Entrar</app-button>
+    </form>
+
+    <button type="button" class="link-btn" (click)="abrirRecuperacao()">Esqueci minha senha</button>
+    </ng-container>
+
+    <!-- Recuperação de senha -->
+    <ng-container *ngIf="forgotMode">
+      <p class="sub">Recuperar acesso</p>
+
+      <ng-container *ngIf="!forgotSent">
+        <p class="hint fg-hint">Informe seu email e enviaremos um link para você definir uma nova senha.</p>
+
+        <div class="field">
+          <label for="fg-email">Email</label>
+          <input
+            id="fg-email"
+            type="email"
+            [(ngModel)]="forgotEmail"
+            placeholder="voce@empresa.com"
+            autocomplete="username"
+            (keyup.enter)="enviarRecuperacao()"
+          />
+        </div>
+
+        <app-button
+          variant="primary"
+          [fullWidth]="true"
+          [loading]="forgotLoading"
+          (clicked)="enviarRecuperacao()"
+        >
+          Enviar link
+        </app-button>
+      </ng-container>
+
+      <!-- Confirmação deliberadamente neutra: não diz se o email existe. -->
+      <p class="fg-done" *ngIf="forgotSent">
+        Se existir uma conta com <strong>{{ forgotEmail }}</strong>, enviamos o link para redefinir a senha.
+        Ele vale por tempo limitado e só pode ser usado uma vez.
+      </p>
+
+      <button type="button" class="link-btn" (click)="voltarAoLogin()">Voltar ao login</button>
+    </ng-container>
+  </div>
+</div>

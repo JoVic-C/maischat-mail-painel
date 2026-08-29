@@ -1,0 +1,25 @@
+:host { display: inline-block; line-height: 1; }
+
+.logo {
+  display: inline-flex;
+  align-items: baseline;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.word { display: inline-block; }
+
+.mark {
+  height: 0.86em;
+  width: auto;
+  margin: 0 0.02em -0.02em;
+  flex-shrink: 0;
+}
+/* Assinatura em uma cor só (ex.: navbar em fundo escuro) mantém o símbolo laranja. */
+.mark.brand { color: var(--o); }
+
+/* Só o símbolo: sem baseline de texto para alinhar, centraliza no bloco. */
+.only-mark { align-items: center; }
+.only-mark .mark { height: 1em; margin: 0; }

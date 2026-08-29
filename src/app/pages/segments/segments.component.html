@@ -1,0 +1,115 @@
+<div class="row-between">
+  <app-page-title subtitle="Filtre contatos por atributo e mire campanhas neles">Segmentos</app-page-title>
+  <app-button variant="primary" (click)="openCreate()">+ Novo segmento</app-button>
+</div>
+
+<div class="card">
+  <app-data-state
+    [loading]="loading"
+    [error]="error"
+    [empty]="!segments.length"
+    emptyText="Nenhum segmento ainda. Crie o primeiro!"
+    [skeletonCols]="5"
+    (retry)="load()"
+  >
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Regras</th>
+            <th>Combinação</th>
+            <th>Contatos</th>
+            <th class="ta-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of segments">
+            <td class="name">{{ s.name }}</td>
+            <td class="muted rules">{{ ruleSummary(s) }}</td>
+            <td><app-status-badge kind="match" [value]="s.matchAll ? 'all' : 'any'"></app-status-badge></td>
+            <td>
+              <span class="badge green" *ngIf="counts[s._id] !== undefined">{{ counts[s._id] }}</span>
+              <app-button
+                *ngIf="counts[s._id] === undefined"
+                variant="outline"
+                size="sm"
+                [loading]="counting === s._id"
+                (click)="preview(s)"
+              >
+                contar
+              </app-button>
+            </td>
+            <td class="ta-right row-actions">
+              <app-button variant="outline" size="sm" (click)="openEdit(s)">editar</app-button>
+              <app-button variant="danger" size="sm" (click)="remove(s)">excluir</app-button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </app-data-state>
+</div>
+
+<app-modal
+  *ngIf="modal"
+  [title]="editingId ? 'Editar segmento' : 'Novo segmento'"
+  size="lg"
+  [busy]="saving"
+  (close)="modal = false"
+>
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <p class="error-msg" *ngIf="formError">{{ formError }}</p>
+
+    <div class="ff">
+      <label for="seg-name">Nome *</label>
+      <input
+        id="seg-name"
+        formControlName="name"
+        placeholder="Ex: Clientes Enterprise"
+        [class.is-invalid]="serverErrors.has('name')"
+      />
+      <div class="field-error" *ngIf="fieldError('name')">{{ fieldError('name') }}</div>
+    </div>
+
+    <div class="ff">
+      <label>Regras</label>
+      <div class="rule" *ngFor="let rule of rules.controls; let i = index" [formGroup]="$any(rule)">
+        <select formControlName="field" [attr.aria-label]="'Campo da regra ' + (i + 1)">
+          <option *ngFor="let f of fieldOptions" [value]="f.value">{{ f.label }}</option>
+        </select>
+        <select formControlName="operator" [attr.aria-label]="'Operador da regra ' + (i + 1)">
+          <option value="equals">é igual a</option>
+          <option value="contains">contém</option>
+        </select>
+        <input
+          formControlName="value"
+          placeholder="valor"
+          [attr.aria-label]="'Valor da regra ' + (i + 1)"
+          [class.is-invalid]="rule.touched && rule.invalid"
+        />
+        <span class="field-error regra-erro" *ngIf="rule.touched && rule.invalid">informe o valor</span>
+        <app-button
+          *ngIf="rules.length > 1"
+          variant="danger"
+          size="sm"
+          (click)="removeRule(i)"
+          [attr.aria-label]="'Remover regra ' + (i + 1)"
+        >
+          ✕
+        </app-button>
+      </div>
+      <app-button variant="outline" size="sm" (click)="addRule()">+ regra</app-button>
+    </div>
+
+    <label class="check-line">
+      <input type="checkbox" formControlName="matchAll" />
+      Contato precisa satisfazer <b>todas</b> as regras (desmarque para "qualquer uma")
+    </label>
+  </form>
+
+  <ng-container modal-actions>
+    <app-button variant="outline" (click)="modal = false">Cancelar</app-button>
+    <app-button variant="primary" [loading]="saving" (click)="save()">Salvar segmento</app-button>
+  </ng-container>
+</app-modal>

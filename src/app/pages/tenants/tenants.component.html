@@ -1,0 +1,188 @@
+<div class="row-between">
+  <app-page-title subtitle="Administração da plataforma — cada cliente tem dados totalmente isolados">
+    Clientes
+  </app-page-title>
+  <app-button variant="primary" (click)="openCreate()">+ Novo cliente</app-button>
+</div>
+
+<div class="note" *ngIf="!auth.activeTenantId">
+  <span class="ico" aria-hidden="true">👉</span>
+  <div>
+    <strong>Escolha um cliente para operar</strong>
+    As telas do painel (contatos, campanhas, SMTP...) trabalham sempre dentro de um cliente. Clique em <b>operar</b> na
+    linha do cliente desejado.
+  </div>
+</div>
+
+<div class="card">
+  <app-data-state
+    [loading]="loading"
+    [error]="error"
+    [empty]="!tenants.length"
+    emptyText="Nenhum cliente cadastrado. Crie o primeiro!"
+    [skeletonCols]="6"
+    (retry)="load()"
+  >
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Identificador</th>
+            <th>Situação</th>
+            <th>Usuários</th>
+            <th>Contatos</th>
+            <th>Campanhas</th>
+            <th class="ta-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let t of tenants" [class.row-active]="t.id === auth.activeTenantId">
+            <td class="name">
+              {{ t.name }}
+              <span class="badge purple tag" *ngIf="t.id === auth.activeTenantId">operando</span>
+            </td>
+            <td class="muted">{{ t.slug }}</td>
+            <td><app-status-badge kind="active" [value]="t.isActive ? 'active' : 'inactive'"></app-status-badge></td>
+            <td>{{ t.users }}</td>
+            <td>{{ t.contacts }}</td>
+            <td>{{ t.campaigns }}</td>
+            <td class="ta-right row-actions">
+              <app-button
+                variant="primary"
+                size="sm"
+                [disabled]="!t.isActive"
+                [title]="t.isActive ? 'Operar o painel neste cliente' : 'Cliente desativado'"
+                (click)="operate(t)"
+              >
+                operar
+              </app-button>
+              <app-button variant="outline" size="sm" (click)="rename(t)">renomear</app-button>
+              <app-button
+                variant="outline"
+                size="sm"
+                (click)="openLimits(t)"
+                title="Fatia da capacidade de envio reservada a este cliente"
+              >
+                limites
+              </app-button>
+              <app-button variant="outline" size="sm" (click)="toggleActive(t)">
+                {{ t.isActive ? 'desativar' : 'reativar' }}
+              </app-button>
+              <app-button variant="danger" size="sm" (click)="remove(t)">excluir</app-button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </app-data-state>
+</div>
+
+<app-modal *ngIf="modal" title="Novo cliente" size="lg" [busy]="saving" (close)="modal = false">
+  <form [formGroup]="form" (ngSubmit)="create()">
+    <p class="error-msg" *ngIf="formError">{{ formError }}</p>
+    <p class="hint">
+      O primeiro administrador é criado junto — sem ele ninguém consegue entrar no painel do cliente.
+    </p>
+
+    <div class="ff">
+      <label for="tn-name">Nome do cliente *</label>
+      <input
+        id="tn-name"
+        formControlName="name"
+        (blur)="suggestSlug()"
+        placeholder="Empresa ACME"
+        [class.is-invalid]="serverErrors.has('name')"
+      />
+      <div class="field-error" *ngIf="fieldError('name')">{{ fieldError('name') }}</div>
+    </div>
+
+    <div class="ff">
+      <label for="tn-slug">Identificador *</label>
+      <input
+        id="tn-slug"
+        formControlName="slug"
+        placeholder="empresa-acme"
+        [class.is-invalid]="serverErrors.has('slug')"
+      />
+      <div class="field-error" *ngIf="fieldError('slug')">{{ fieldError('slug') }}</div>
+    </div>
+
+    <div class="rw">
+      <div class="ff">
+        <label for="tn-admin-name">Nome do administrador</label>
+        <input id="tn-admin-name" formControlName="adminName" />
+      </div>
+      <div class="ff">
+        <label for="tn-admin-email">Email do administrador *</label>
+        <input
+          id="tn-admin-email"
+          type="email"
+          formControlName="adminEmail"
+          placeholder="admin@acme.com"
+          [class.is-invalid]="serverErrors.has('adminEmail')"
+        />
+        <div class="field-error" *ngIf="fieldError('adminEmail')">{{ fieldError('adminEmail') }}</div>
+      </div>
+    </div>
+
+    <div class="ff">
+      <label for="tn-admin-pass">Senha do administrador *</label>
+      <input
+        id="tn-admin-pass"
+        type="password"
+        formControlName="adminPassword"
+        autocomplete="new-password"
+        [class.is-invalid]="serverErrors.has('adminPassword')"
+      />
+      <div class="field-error" *ngIf="fieldError('adminPassword')">{{ fieldError('adminPassword') }}</div>
+      <p class="hint sub">Passe-a ao cliente por um canal seguro.</p>
+    </div>
+  </form>
+
+  <ng-container modal-actions>
+    <app-button variant="outline" (click)="modal = false">Cancelar</app-button>
+    <app-button variant="primary" [loading]="saving" (click)="create()">Criar cliente</app-button>
+  </ng-container>
+</app-modal>
+
+<!-- Os limites do cliente são uma FATIA da capacidade do motor, não capacidade extra:
+     o worker é um só e os slots são repartidos entre todos os clientes. -->
+<app-modal *ngIf="limitsFor" [title]="'Limites de envio — ' + limitsFor.name" [busy]="savingLimits" (close)="limitsFor = null">
+  <form [formGroup]="limitsForm" (ngSubmit)="saveLimits()">
+    <p class="error-msg" *ngIf="limitsError">{{ limitsError }}</p>
+
+    <div class="ff">
+      <label for="tl-conc">Envios simultâneos</label>
+      <input id="tl-conc" type="number" min="0" formControlName="concurrency" />
+      <p class="hint sub">
+        Quantos dos
+        <b>{{ engine?.workerConcurrency ?? '—' }}</b>
+        envios simultâneos do motor este cliente pode ocupar. <b>0</b> = sem limite próprio.
+      </p>
+    </div>
+
+    <div class="ff">
+      <label for="tl-rate">Emails por minuto</label>
+      <input id="tl-rate" type="number" min="0" formControlName="ratePerMinute" />
+      <p class="hint sub">
+        Teto deste cliente, dentro dos
+        <b>{{ engine?.ratePerMinute ?? '—' }}</b>
+        por minuto da plataforma. <b>0</b> = sem limite próprio.
+      </p>
+    </div>
+
+    <div class="note">
+      <span class="ico" aria-hidden="true">ℹ️</span>
+      <div>
+        Estes números <b>repartem</b> a capacidade do motor — não criam capacidade nova. O limite por hora e por
+        dia continua no servidor SMTP do cliente, na tela de SMTP; vale sempre o mais restritivo.
+      </div>
+    </div>
+  </form>
+
+  <ng-container modal-actions>
+    <app-button variant="outline" (click)="limitsFor = null">Cancelar</app-button>
+    <app-button variant="primary" [loading]="savingLimits" (click)="saveLimits()">Salvar limites</app-button>
+  </ng-container>
+</app-modal>

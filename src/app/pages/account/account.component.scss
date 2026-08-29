@@ -1,0 +1,20 @@
+.card-title { font-size: 15px; font-weight: 800; color: var(--n); margin-bottom: 12px; }
+.card-title.spaced { margin-top: 24px; }
+
+.info { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 13px; margin: 0 0 4px; }
+.info dt { color: var(--g50); font-weight: 600; }
+.info dd { margin: 0; color: var(--t); font-weight: 600; }
+
+.muted { margin-bottom: 12px; display: block; }
+
+.ff { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.ff label {
+  font-size: 10px; text-transform: uppercase; color: var(--g40);
+  font-weight: 700; letter-spacing: 0.6px;
+}
+
+.error-msg {
+  background: var(--rl); color: var(--r); border: 1px solid #f5b7b1;
+  border-radius: 8px; padding: 10px 12px; font-size: 12.5px;
+  margin: 0 0 12px; white-space: pre-line;
+}

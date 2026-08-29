@@ -1,0 +1,186 @@
+<div class="row-between">
+  <app-page-title subtitle="Quem tem acesso ao painel deste cliente">Equipe</app-page-title>
+  <app-button variant="primary" (click)="openCreate()">+ Novo usuário</app-button>
+</div>
+
+<div class="card">
+  <app-data-state
+    [loading]="loading"
+    [error]="error"
+    [empty]="!users.length"
+    emptyText="Nenhum usuário cadastrado."
+    [skeletonCols]="5"
+    (retry)="load()"
+  >
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Nome</th>
+            <th>Papel</th>
+            <th>Situação</th>
+            <th class="ta-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let u of users">
+            <td class="email">
+              {{ u.email }}
+              <span class="badge purple self" *ngIf="isSelf(u)">você</span>
+            </td>
+            <td>{{ u.name || '—' }}</td>
+            <td><app-status-badge kind="role" [value]="u.role"></app-status-badge></td>
+            <td>
+              <app-status-badge kind="active" [value]="u.isActive ? 'active' : 'inactive'"></app-status-badge>
+              <span class="badge yellow" *ngIf="u.pendingInvite" title="Ainda não definiu a senha pelo link do convite">
+                convite pendente
+              </span>
+            </td>
+            <td class="ta-right row-actions">
+              <app-button variant="outline" size="sm" (click)="openEdit(u)">editar</app-button>
+              <app-button
+                *ngIf="u.pendingInvite"
+                variant="outline"
+                size="sm"
+                (click)="resendInvite(u)"
+                title="Gera um link novo e invalida o anterior"
+              >
+                reenviar convite
+              </app-button>
+              <app-button
+                *ngIf="!u.pendingInvite"
+                variant="outline"
+                size="sm"
+                (click)="gerarLinkSenha(u)"
+                title="Gera um link para a pessoa definir uma nova senha"
+              >
+                link de senha
+              </app-button>
+              <app-button
+                variant="outline"
+                size="sm"
+                (click)="revokeSessions(u)"
+                title="Desconecta este usuário de todos os dispositivos"
+              >
+                encerrar sessões
+              </app-button>
+              <app-button
+                variant="danger"
+                size="sm"
+                [disabled]="isSelf(u)"
+                [title]="isSelf(u) ? 'Você não pode excluir a própria conta' : 'Excluir usuário'"
+                (click)="remove(u)"
+              >
+                excluir
+              </app-button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </app-data-state>
+</div>
+
+<app-modal
+  *ngIf="modal"
+  [title]="editingId ? 'Editar usuário' : 'Novo usuário'"
+  [busy]="saving"
+  (close)="modal = false"
+>
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <p class="error-msg" *ngIf="formError">{{ formError }}</p>
+
+    <div class="ff">
+      <label for="us-email">Email *</label>
+      <input
+        id="us-email"
+        type="email"
+        formControlName="email"
+        placeholder="pessoa@empresa.com"
+        [class.is-invalid]="serverErrors.has('email')"
+      />
+      <div class="field-error" *ngIf="fieldError('email')">{{ fieldError('email') }}</div>
+    </div>
+
+    <div class="ff">
+      <label for="us-name">Nome</label>
+      <input id="us-name" formControlName="name" />
+    </div>
+
+    <div class="ff">
+      <label for="us-pass">{{ editingId ? 'Nova senha (deixe vazio para manter)' : 'Senha (opcional)' }}</label>
+      <input
+        id="us-pass"
+        type="password"
+        formControlName="password"
+        autocomplete="new-password"
+        [class.is-invalid]="serverErrors.has('password')"
+      />
+      <div class="field-error" *ngIf="fieldError('password')">{{ fieldError('password') }}</div>
+      <p class="hint sub" *ngIf="editingId">Trocar a senha derruba as sessões abertas do usuário.</p>
+      <p class="hint sub" *ngIf="!editingId">
+        Deixe vazio (recomendado) para enviar um convite por email — a pessoa define a própria senha e você
+        nunca precisa conhecê-la.
+      </p>
+    </div>
+
+    <div class="ff">
+      <label for="us-role">Papel</label>
+      <select id="us-role" formControlName="role">
+        <option value="user">Usuário</option>
+        <option value="admin">Administrador</option>
+      </select>
+      <p class="hint sub">
+        <b>Usuário</b> opera o dia a dia: contatos, listas, templates e campanhas.
+        <b>Administrador</b> faz isso e também gerencia a equipe, os servidores SMTP e os bounces.
+      </p>
+      <p class="hint sub" *ngIf="editingSelf">Você não pode alterar o próprio papel.</p>
+    </div>
+
+    <label class="check-line">
+      <input type="checkbox" formControlName="isActive" />
+      Conta ativa (desmarcar bloqueia o acesso imediatamente)
+    </label>
+    <p class="hint sub" *ngIf="editingSelf">Você não pode desativar a própria conta.</p>
+  </form>
+
+  <ng-container modal-actions>
+    <app-button variant="outline" (click)="modal = false">Cancelar</app-button>
+    <app-button variant="primary" [loading]="saving" (click)="save()">Salvar</app-button>
+  </ng-container>
+</app-modal>
+
+<!-- Link do convite: fica disponível para o admin repassar por outro canal quando o
+     email não sai (cliente ainda sem SMTP configurado, caixa recusando, etc.). -->
+<app-modal
+  *ngIf="invite"
+  [title]="inviteKind === 'reset' ? 'Link de redefinição de senha' : 'Convite gerado'"
+  (close)="invite = null"
+>
+  <p class="inv-intro">
+    Enviamos o link para <strong>{{ inviteFor }}</strong
+    ><span *ngIf="invite.emailSent === false"> — mas o email <b>não pôde ser enviado</b>, então repasse o link abaixo</span
+    >.
+  </p>
+
+  <p class="inv-intro" *ngIf="inviteKind === 'reset'">
+    A senha atual continua valendo até a pessoa usar o link — e você não fica sabendo a nova.
+  </p>
+
+  <div class="inv-link">
+    <code>{{ invite.url }}</code>
+    <app-button variant="outline" size="sm" (click)="copyInviteLink()">
+      {{ linkCopied ? 'copiado ✓' : 'copiar' }}
+    </app-button>
+  </div>
+
+  <p class="hint sub">
+    O link vale até {{ invite.expiresAt | date: 'dd/MM/yyyy HH:mm' }}, só pode ser usado uma vez e dá acesso à
+    conta — trate como senha.
+  </p>
+
+  <ng-container modal-actions>
+    <app-button variant="primary" (click)="invite = null">Fechar</app-button>
+  </ng-container>
+</app-modal>

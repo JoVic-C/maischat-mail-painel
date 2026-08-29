@@ -1,0 +1,16 @@
+<app-modal
+  *ngIf="svc.state"
+  [title]="svc.state.title"
+  [variant]="svc.state.danger ? 'danger' : 'default'"
+  size="sm"
+  (close)="svc.resolve(false)"
+>
+  <p style="white-space:pre-line">{{ svc.state.message }}</p>
+
+  <ng-container modal-actions>
+    <app-button variant="outline" (click)="svc.resolve(false)">{{ svc.state.cancelLabel }}</app-button>
+    <app-button [variant]="svc.state.danger ? 'danger' : 'primary'" (click)="svc.resolve(true)">
+      {{ svc.state.confirmLabel }}
+    </app-button>
+  </ng-container>
+</app-modal>

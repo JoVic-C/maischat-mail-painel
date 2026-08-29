@@ -1,0 +1,10 @@
+<div class="toast-stack" *ngIf="toasts.length">
+  <div *ngFor="let t of toasts" class="toast" [ngClass]="'toast-' + t.kind" role="status" aria-live="polite">
+    <span class="ti" aria-hidden="true">{{ iconFor(t.kind) }}</span>
+    <div class="tb">
+      <div class="tt" *ngIf="t.title">{{ t.title }}</div>
+      <div class="tm" [class.no-title]="!t.title">{{ t.message }}</div>
+    </div>
+    <button type="button" class="tx" (click)="dismiss(t.id)" aria-label="fechar">×</button>
+  </div>
+</div>

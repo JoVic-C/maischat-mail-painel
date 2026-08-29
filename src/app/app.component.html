@@ -1,0 +1,14 @@
+<a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+<app-navbar *ngIf="auth.isLoggedIn"></app-navbar>
+
+<main id="conteudo" [class.app-main]="auth.isLoggedIn">
+  <div [class.container]="auth.isLoggedIn">
+    <router-outlet></router-outlet>
+  </div>
+</main>
+
+<!-- Sobreposições globais, montadas uma única vez -->
+<app-toast-container></app-toast-container>
+<app-confirm></app-confirm>
+<app-prompt></app-prompt>

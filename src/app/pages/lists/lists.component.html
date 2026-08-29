@@ -1,0 +1,142 @@
+<div class="row-between">
+  <app-page-title subtitle="Organize seus contatos em listas públicas e privadas">Listas</app-page-title>
+
+  <div class="head-actions">
+    <app-button
+      variant="outline"
+      [loading]="resyncing"
+      (click)="resync()"
+      title="Recalcula o nº de contatos de cada lista a partir dos vínculos reais"
+    >
+      ↻ Recalcular contadores
+    </app-button>
+    <app-button variant="primary" (click)="openCreate()">+ Nova lista</app-button>
+  </div>
+</div>
+
+<div class="card">
+  <app-data-state
+    [loading]="loading"
+    [error]="error"
+    [empty]="!lists.length"
+    emptyText="Nenhuma lista ainda. Crie a primeira!"
+    [skeletonCols]="5"
+    (retry)="load()"
+  >
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Tipo</th>
+            <th>Contatos</th>
+            <th>Tags</th>
+            <th class="ta-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let l of lists">
+            <td>
+              <span class="name">{{ l.name }}</span>
+              <span class="muted desc" *ngIf="l.description">{{ l.description }}</span>
+            </td>
+            <td><app-status-badge kind="listType" [value]="l.type"></app-status-badge></td>
+            <td>{{ l.contactCount }}</td>
+            <td class="muted">{{ l.tags.length ? l.tags.join(', ') : '—' }}</td>
+            <td class="ta-right row-actions">
+              <app-button variant="outline" size="sm" (click)="openEdit(l)">editar</app-button>
+              <app-button variant="danger" size="sm" (click)="askDelete(l)">excluir</app-button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </app-data-state>
+</div>
+
+<!-- Confirmação de exclusão -->
+<app-modal
+  *ngIf="deleteTarget"
+  title="Excluir lista"
+  variant="danger"
+  size="sm"
+  [busy]="deleting"
+  (close)="deleteTarget = null"
+>
+  <p>
+    Tem certeza que deseja excluir a lista <b>"{{ deleteTarget.name }}"</b>?
+  </p>
+  <p class="hint" *ngIf="deleteTarget.contactCount">
+    Ela tem <b>{{ deleteTarget.contactCount }}</b> contato(s). Os contatos <b>não</b> serão apagados — apenas deixam de
+    pertencer a esta lista.
+  </p>
+  <p class="hint" *ngIf="!deleteTarget.contactCount">Esta ação não pode ser desfeita.</p>
+
+  <ng-container modal-actions>
+    <app-button variant="outline" (click)="deleteTarget = null">Cancelar</app-button>
+    <app-button variant="danger" [loading]="deleting" (click)="confirmDelete()">Excluir lista</app-button>
+  </ng-container>
+</app-modal>
+
+<!-- Criar (wizard de 2 passos) / editar -->
+<app-modal
+  *ngIf="modal"
+  [title]="wizardStep === 2 ? 'Adicionar contatos' : editingId ? 'Editar lista' : 'Nova lista'"
+  [size]="wizardStep === 2 ? 'lg' : 'md'"
+  [busy]="saving"
+  [dismissOnBackdrop]="wizardStep === 1"
+  (close)="closeWizard()"
+>
+  <!-- Passo 1: dados da lista -->
+  <form [formGroup]="form" *ngIf="wizardStep === 1" (ngSubmit)="submit()">
+    <p class="error-msg" *ngIf="formError">{{ formError }}</p>
+
+    <div class="ff">
+      <label for="list-name">Nome *</label>
+      <input
+        id="list-name"
+        formControlName="name"
+        placeholder="Ex: Leads Quentes"
+        [class.is-invalid]="serverErrors.has('name')"
+      />
+      <div class="field-error" *ngIf="fieldError('name')">{{ fieldError('name') }}</div>
+    </div>
+
+    <div class="ff">
+      <label for="list-desc">Descrição</label>
+      <input id="list-desc" formControlName="description" placeholder="Opcional" />
+    </div>
+
+    <div class="ff">
+      <label for="list-type">Tipo</label>
+      <select id="list-type" formControlName="type">
+        <option value="private">Privada</option>
+        <option value="public">Pública</option>
+      </select>
+    </div>
+  </form>
+
+  <!-- Passo 2: importar contatos (só na criação) -->
+  <div *ngIf="wizardStep === 2 && createdList">
+    <p class="hint">
+      ✅ Lista <b>"{{ createdList.name }}"</b> criada! Importe contatos agora (opcional) ou clique em <b>Pular</b> para
+      concluir.
+    </p>
+    <app-csv-import
+      [fixedListId]="createdList._id"
+      [lists]="lists"
+      cancelLabel="Pular"
+      doneCancelLabel="Concluir"
+      (finished)="finishWizard()"
+      (cancel)="finishWizard()"
+    >
+    </app-csv-import>
+  </div>
+
+  <ng-container modal-actions *ngIf="wizardStep === 1">
+    <app-button variant="outline" (click)="closeWizard()">Cancelar</app-button>
+    <app-button variant="primary" [loading]="saving" (click)="submit()">
+      {{ editingId ? 'Salvar alterações' : 'Criar lista →' }}
+    </app-button>
+  </ng-container>
+</app-modal>

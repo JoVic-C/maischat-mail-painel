@@ -1,0 +1,24 @@
+.email { font-weight: 600; }
+.self { margin-left: 6px; }
+
+/* ─── Painel do convite gerado ─── */
+.inv-intro { font-size: 13.5px; color: var(--t2); margin: 0 0 14px; line-height: 1.55; }
+
+.inv-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg);
+  border: 1px solid var(--br);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+/* O link é longo: quebra em vez de estourar o modal. */
+.inv-link code {
+  flex: 1;
+  font-size: 12px;
+  color: var(--t);
+  word-break: break-all;
+  line-height: 1.45;
+}

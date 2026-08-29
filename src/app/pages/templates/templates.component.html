@@ -1,0 +1,152 @@
+<div class="row-between">
+  <app-page-title subtitle="Editor visual — formate com os botões, sem precisar saber HTML">Templates</app-page-title>
+  <app-button variant="primary" (click)="openCreate()">+ Novo template</app-button>
+</div>
+
+<div class="card">
+  <app-data-state
+    [loading]="loading"
+    [error]="error"
+    [empty]="!templates.length"
+    emptyText="Nenhum template ainda. Crie o primeiro para poder disparar campanhas!"
+    [skeletonCols]="4"
+    (retry)="load()"
+  >
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Assunto</th>
+            <th>Variáveis</th>
+            <th class="ta-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let t of templates">
+            <td class="name">{{ t.name }}</td>
+            <td class="muted">{{ t.subject }}</td>
+            <td>
+              <span class="badge purple var" *ngFor="let v of t.variables">{{ '{{' + v + '}}' }}</span>
+              <span class="muted" *ngIf="!t.variables.length">—</span>
+            </td>
+            <td class="ta-right row-actions">
+              <app-button variant="outline" size="sm" (click)="openEdit(t)">editar</app-button>
+              <app-button variant="outline" size="sm" (click)="duplicate(t)">duplicar</app-button>
+              <app-button variant="danger" size="sm" (click)="remove(t)">excluir</app-button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </app-data-state>
+</div>
+
+<app-modal
+  *ngIf="editor"
+  [title]="editingId ? 'Editar template' : 'Novo template'"
+  size="xl"
+  [busy]="saving"
+  [dismissOnBackdrop]="false"
+  (close)="closeEditor()"
+>
+  <form [formGroup]="form">
+    <p class="error-msg" *ngIf="formError">{{ formError }}</p>
+
+    <div class="rw">
+      <div class="ff">
+        <label for="tpl-name">Nome *</label>
+        <input
+          id="tpl-name"
+          formControlName="name"
+          placeholder="Boas-vindas"
+          [class.is-invalid]="serverErrors.has('name')"
+        />
+        <div class="field-error" *ngIf="fieldError('name')">{{ fieldError('name') }}</div>
+      </div>
+      <div class="ff">
+        <label for="tpl-subject">Assunto *</label>
+        <input
+          id="tpl-subject"
+          formControlName="subject"
+          (input)="preview()"
+          placeholder="Olá {{ '{{name}}' }}!"
+          [class.is-invalid]="serverErrors.has('subject')"
+        />
+        <div class="field-error" *ngIf="fieldError('subject')">{{ fieldError('subject') }}</div>
+      </div>
+    </div>
+
+    <div class="ff">
+      <div class="editor-head">
+        <label>Conteúdo do email *</label>
+        <app-button variant="outline" size="sm" (click)="toggleAdvanced()">
+          {{ advanced ? '← Editor visual' : '&lt;/&gt; HTML avançado' }}
+        </app-button>
+      </div>
+
+      <!-- Modo VISUAL -->
+      <div *ngIf="!advanced">
+        <div class="toolbar" (mousedown)="$event.preventDefault()" role="toolbar" aria-label="Formatação">
+          <button type="button" (click)="exec('bold')" title="Negrito" aria-label="Negrito"><b>N</b></button>
+          <button type="button" (click)="exec('italic')" title="Itálico" aria-label="Itálico"><i>I</i></button>
+          <button type="button" (click)="exec('underline')" title="Sublinhado" aria-label="Sublinhado"><u>S</u></button>
+          <span class="sep"></span>
+          <button type="button" (click)="exec('formatBlock', 'H1')" title="Título">H1</button>
+          <button type="button" (click)="exec('formatBlock', 'H2')" title="Subtítulo">H2</button>
+          <button type="button" (click)="exec('formatBlock', 'P')" title="Parágrafo">¶</button>
+          <span class="sep"></span>
+          <button type="button" (click)="exec('insertUnorderedList')" title="Lista">• lista</button>
+          <button type="button" (click)="addLink()" title="Inserir link">🔗 link</button>
+          <button type="button" (click)="imgInput.click()" [disabled]="uploadingImg" title="Inserir imagem">
+            {{ uploadingImg ? '⏳' : '🖼' }} imagem
+          </button>
+          <input
+            #imgInput
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            hidden
+            (change)="onImageSelected($event, imgInput)"
+          />
+          <span class="sep"></span>
+          <span class="vlabel">variáveis:</span>
+          <button type="button" class="vbtn" (click)="insertVar('name')">{{ '{{name}}' }}</button>
+          <button type="button" class="vbtn" (click)="insertVar('email')">{{ '{{email}}' }}</button>
+          <button type="button" class="vbtn" (click)="insertVar('company')">{{ '{{company}}' }}</button>
+        </div>
+        <div
+          #editorEl
+          class="wysiwyg"
+          [class.is-invalid]="form.controls['html'].touched && form.controls['html'].invalid"
+          contenteditable="true"
+          (input)="syncFromEditor()"
+          role="textbox"
+          aria-multiline="true"
+          aria-label="Conteúdo do email"
+        ></div>
+      </div>
+
+      <!-- Modo HTML avançado -->
+      <textarea
+        *ngIf="advanced"
+        formControlName="html"
+        (input)="preview()"
+        class="html-editor"
+        aria-label="HTML do email"
+        placeholder="<h1>Olá {{ '{{name}}' }}!</h1>"
+      ></textarea>
+
+      <div class="field-error" *ngIf="fieldError('html')">{{ fieldError('html') }}</div>
+    </div>
+
+    <div class="ff" *ngIf="previewHtml">
+      <label>Prévia (com dados de exemplo)</label>
+      <div class="preview" [innerHTML]="previewHtml"></div>
+    </div>
+  </form>
+
+  <ng-container modal-actions>
+    <app-button variant="outline" (click)="closeEditor()">Cancelar</app-button>
+    <app-button variant="primary" [loading]="saving" (click)="save()">Salvar template</app-button>
+  </ng-container>
+</app-modal>

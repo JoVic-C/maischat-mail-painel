@@ -1,0 +1,4 @@
+<span class="badge" *ngIf="info; else fallback" [class]="'badge ' + info.cls" [title]="tooltip">
+  {{ info.label }}
+</span>
+<ng-template #fallback><span class="badge gray">{{ value }}</span></ng-template>

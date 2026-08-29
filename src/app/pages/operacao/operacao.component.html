@@ -1,0 +1,119 @@
+<div class="row-between">
+  <app-page-title subtitle="Fila e envios de todos os clientes, em tempo quase real">Operação</app-page-title>
+
+  <div class="ops-actions">
+    <div class="seg" role="group" aria-label="Janela de tempo">
+      <button type="button" [class.on]="hours === 1" (click)="changeWindow(1)">1h</button>
+      <button type="button" [class.on]="hours === 24" (click)="changeWindow(24)">24h</button>
+      <button type="button" [class.on]="hours === 168" (click)="changeWindow(168)">7d</button>
+    </div>
+    <app-button variant="outline" size="sm" (click)="toggleAutoRefresh()">
+      {{ autoRefresh ? 'atualizando ●' : 'pausado' }}
+    </app-button>
+  </div>
+</div>
+
+<app-data-state [loading]="loading" [error]="error" [empty]="false" [skeletonCols]="4" (retry)="load()">
+  <!-- ─── Fila: a leitura mais barata e a que responde "está saindo?" ─── -->
+  <div class="queue">
+    <div class="q">
+      <span class="v">{{ overview?.queue?.waiting ?? 0 }}</span>
+      <span class="k">aguardando</span>
+    </div>
+    <div class="q">
+      <span class="v accent">{{ overview?.queue?.active ?? 0 }}</span>
+      <span class="k">enviando agora</span>
+    </div>
+    <div class="q">
+      <span class="v">{{ overview?.queue?.delayed ?? 0 }}</span>
+      <span class="k">adiados</span>
+      <span class="q-hint">pausa, cota ou greylist</span>
+    </div>
+    <div class="q">
+      <span class="v" [class.bad]="(overview?.queue?.failed ?? 0) > 0">{{ overview?.queue?.failed ?? 0 }}</span>
+      <span class="k">falhos na fila</span>
+    </div>
+    <div class="q">
+      <span class="v">{{ overview?.queue?.scheduled ?? 0 }}</span>
+      <span class="k">campanhas agendadas</span>
+    </div>
+  </div>
+
+  <!-- ─── Por cliente: só números, sem dado pessoal ─── -->
+  <div class="card">
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th class="ta-right">Enviados</th>
+            <th class="ta-right">Falhas</th>
+            <th class="ta-right">Bounces</th>
+            <th>Campanhas</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let t of overview?.tenants; trackBy: trackByTenant" [class.row-bad]="errorsOf(t) > 0">
+            <td>
+              {{ t.name }}
+              <span class="badge gray" *ngIf="!t.isActive">desativado</span>
+            </td>
+            <td class="ta-right num">{{ t.sent | number }}</td>
+            <td class="ta-right num" [class.bad]="t.failed > 0">{{ t.failed | number }}</td>
+            <td class="ta-right num" [class.bad]="t.bounced > 0">{{ t.bounced | number }}</td>
+            <td>
+              <span class="badge green" *ngIf="t.sending">{{ t.sending }} em envio</span>
+              <span class="badge yellow" *ngIf="t.paused">{{ t.paused }} pausada(s)</span>
+              <span class="muted" *ngIf="!t.sending && !t.paused">—</span>
+            </td>
+          </tr>
+          <tr *ngIf="!overview?.tenants?.length">
+            <td colspan="5" class="empty">Nenhum cliente cadastrado.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─── Falhas detalhadas: dado pessoal dos clientes, sob demanda e auditado ─── -->
+  <div class="card">
+    <div class="row-between fail-head">
+      <div>
+        <strong>Últimas falhas e bounces</strong>
+        <p class="hint sub">
+          Mostra o <b>endereço do destinatário</b>, que é dado dos clientes. Cada consulta fica registrada em
+          auditoria com seu usuário.
+        </p>
+      </div>
+      <app-button variant="outline" size="sm" [loading]="loadingFailures" (click)="loadFailures()">
+        {{ failuresLoaded ? 'atualizar' : 'ver falhas' }}
+      </app-button>
+    </div>
+
+    <div class="tbl-wrap" *ngIf="failuresLoaded">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Destinatário</th>
+            <th>Situação</th>
+            <th>Erro</th>
+            <th>Quando</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let f of failures">
+            <td>{{ f.tenantName }}</td>
+            <td class="email">{{ f.email }}</td>
+            <td><app-status-badge kind="send" [value]="f.status"></app-status-badge></td>
+            <td class="err" [title]="f.error">{{ f.error || '—' }}</td>
+            <td class="muted">{{ f.at | date: 'dd/MM HH:mm' }}</td>
+          </tr>
+          <tr *ngIf="!failures.length">
+            <td colspan="5" class="empty">Nenhuma falha registrada. 🎉</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</app-data-state>

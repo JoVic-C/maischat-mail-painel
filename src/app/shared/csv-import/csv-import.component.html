@@ -1,0 +1,119 @@
+<!-- ── FASE 1: formulário ── -->
+<form [formGroup]="form" *ngIf="phase === 'form'" (ngSubmit)="startValidation()">
+  <p class="hint">
+    Cole o CSV (com cabeçalho). Cada email é validado ao vivo: <b>formato</b>, <b>domínio</b>, <b>duplicados</b> e
+    <b>já cadastrados</b>. No fim, você escolhe importar só os corretos.
+  </p>
+
+  <div class="ff" *ngIf="!fixedListId">
+    <label for="csv-list">Lista de destino</label>
+    <select id="csv-list" formControlName="listId">
+      <option value="">— nenhuma —</option>
+      <option *ngFor="let l of lists" [value]="l._id">{{ l.name }}</option>
+    </select>
+  </div>
+
+  <div class="ff">
+    <label for="csv-text">Conteúdo CSV</label>
+    <textarea id="csv-text" formControlName="csv" placeholder="nome;email;empresa&#10;João;joao@x.com;ACME"></textarea>
+  </div>
+
+  <div class="actions">
+    <app-button variant="outline" (click)="cancel.emit()">{{ cancelLabel }}</app-button>
+    <app-button type="submit" variant="primary" [disabled]="form.invalid">Validar</app-button>
+  </div>
+</form>
+
+<!-- ── FASES 2 e 3: validação ao vivo + resultado ── -->
+<div *ngIf="phase !== 'form'">
+  <div class="progress-head">
+    <span class="progress-title">
+      {{ phase === 'validating' ? 'Validando contatos...' : 'Validação concluída' }}
+    </span>
+    <span class="muted">{{ streamProcessed }}<span *ngIf="streamTotal">/{{ streamTotal }}</span></span>
+  </div>
+  <div
+    class="progress-track"
+    role="progressbar"
+    [attr.aria-valuenow]="progressPct"
+    aria-valuemin="0"
+    aria-valuemax="100"
+  >
+    <div class="progress-bar" [style.width.%]="progressPct"></div>
+  </div>
+
+  <!-- contadores -->
+  <div class="counters">
+    <div class="stat"><div class="v ok">{{ streamNew }}</div><div class="k">✅ Novos</div></div>
+    <div class="stat"><div class="v warn">{{ streamAdd }}</div><div class="k">➕ + à lista</div></div>
+    <div class="stat"><div class="v soft">{{ streamInList + streamAlready }}</div><div class="k">⏭️ Ignorados</div></div>
+    <div class="stat"><div class="v bad">{{ streamInvalid }}</div><div class="k">❌ Incorretos</div></div>
+  </div>
+
+  <!-- lista ao vivo -->
+  <div class="ff live">
+    <label>{{ phase === 'validating' ? 'Passando pelos contatos...' : 'Últimos processados' }}</label>
+    <div class="live-box">
+      <table class="tbl" *ngIf="visibleRows.length">
+        <tbody>
+          <tr *ngFor="let r of visibleRows">
+            <td style="font-weight:600">{{ r.email }}</td>
+            <td class="ta-right">
+              <app-status-badge kind="csvRow" [value]="r.kind" [hint]="rowHint(r)"></app-status-badge>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <app-empty-state *ngIf="!visibleRows.length">Aguardando primeiros resultados…</app-empty-state>
+    </div>
+    <p *ngIf="streamProcessed > visibleRows.length" class="muted">
+      Mostrando os últimos {{ visibleRows.length }} de {{ streamProcessed }} processados.
+    </p>
+  </div>
+
+  <!-- ações durante a validação -->
+  <div class="actions" *ngIf="phase === 'validating'">
+    <app-button variant="outline" (click)="cancelValidation()">Cancelar</app-button>
+  </div>
+
+  <!-- ações após concluir -->
+  <div *ngIf="phase === 'done'">
+    <app-empty-state *ngIf="!streamProcessed">Nenhum contato encontrado no CSV.</app-empty-state>
+
+    <form [formGroup]="form">
+      <div class="ff" *ngIf="!fixedListId">
+        <label for="csv-list-done">Lista de destino</label>
+        <select id="csv-list-done" formControlName="listId">
+          <option value="">— nenhuma —</option>
+          <option *ngFor="let l of lists" [value]="l._id">{{ l.name }}</option>
+        </select>
+      </div>
+    </form>
+
+    <p *ngIf="needsRevalidate" class="hint warn">
+      Você trocou a lista de destino. Como há contatos já cadastrados, revalide para reclassificá-los corretamente.
+    </p>
+
+    <div class="actions" *ngIf="invalidRows.length">
+      <app-button variant="success" [loading]="downloading" (click)="downloadInvalid()">
+        ⬇ Baixar Excel dos incorretos ({{ invalidRows.length }})
+      </app-button>
+    </div>
+
+    <div class="actions">
+      <app-button variant="outline" (click)="cancel.emit()">{{ doneCancelLabel }}</app-button>
+      <app-button *ngIf="needsRevalidate" variant="primary" (click)="startValidation()">
+        ↻ Revalidar com a nova lista
+      </app-button>
+      <app-button
+        *ngIf="!needsRevalidate"
+        variant="primary"
+        [disabled]="!importableCount"
+        [loading]="importingValid"
+        (click)="importValid()"
+      >
+        Importar {{ importableCount }} contato(s)
+      </app-button>
+    </div>
+  </div>
+</div>

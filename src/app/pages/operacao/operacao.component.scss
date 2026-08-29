@@ -1,0 +1,71 @@
+.ops-actions { display: flex; align-items: center; gap: 10px; }
+
+/* Alternador de janela de tempo */
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--br);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--c);
+}
+
+.seg button {
+  border: 0;
+  background: transparent;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--g50);
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.seg button:hover { background: var(--bg); }
+.seg button.on { background: var(--n); color: #fff; }
+
+/* ─── Cartões da fila ─── */
+.queue {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.q {
+  background: var(--c);
+  border: 1px solid var(--br);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.q .v { font-size: 26px; font-weight: 700; color: var(--t); line-height: 1.1; }
+.q .v.accent { color: var(--o); }
+.q .v.bad { color: var(--r); }
+.q .k { font-size: 11.5px; color: var(--g50); margin-top: 4px; font-weight: 600; }
+.q-hint { font-size: 10.5px; color: var(--g70); margin-top: 2px; }
+
+/* ─── Tabelas ─── */
+.num { font-variant-numeric: tabular-nums; }
+.bad { color: var(--r); font-weight: 600; }
+.row-bad { background: var(--rl); }
+
+.email { word-break: break-all; }
+
+/* O erro do SMTP pode ser longo: corta e mostra inteiro no title. */
+.err {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--t2);
+}
+
+.fail-head { align-items: flex-start; padding-bottom: 4px; }
+.fail-head .hint { max-width: 460px; margin-top: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .seg button { transition: none; }
+}

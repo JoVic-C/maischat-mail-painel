@@ -1,0 +1,184 @@
+<div class="row-between">
+  <app-page-title subtitle="Compatível com Gmail, Outlook, SendGrid, Amazon SES e qualquer SMTP">
+    Configuração SMTP
+  </app-page-title>
+  <app-button variant="primary" (click)="openCreate()">+ Novo servidor</app-button>
+</div>
+
+<div class="note">
+  <span class="ico" aria-hidden="true">📮</span>
+  <div>
+    <strong>Envio padrão pelo xMailer</strong>
+    Você <b>não precisa</b> configurar nada para começar: se nenhum servidor estiver cadastrado, o mMail usa o
+    <b>xMailer</b> automaticamente. Quer usar seu próprio SMTP (Gmail, SendGrid, SES...)? Cadastre abaixo e marque como
+    <b>padrão</b> — ele passa a ser usado no lugar do xMailer.
+  </div>
+</div>
+
+<div class="card">
+  <app-data-state
+    [loading]="loading"
+    [error]="error"
+    [empty]="!servers.length"
+    emptyText="Nenhum servidor configurado. O envio usa o xMailer padrão."
+    [skeletonCols]="6"
+    (retry)="load()"
+  >
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Host</th>
+            <th>Porta</th>
+            <th>Remetente</th>
+            <th>Limites</th>
+            <th>Padrão</th>
+            <th class="ta-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of servers">
+            <td class="name">{{ s.name }}</td>
+            <td class="muted">{{ s.host }}</td>
+            <td>{{ s.port }}</td>
+            <td class="muted">{{ s.fromEmail }}</td>
+            <td class="muted">{{ limitsLabel(s) }}</td>
+            <td><span class="badge green" *ngIf="s.isDefault">padrão</span></td>
+            <td class="ta-right row-actions">
+              <app-button variant="outline" size="sm" (click)="openEdit(s)">editar</app-button>
+              <app-button variant="danger" size="sm" (click)="remove(s)">excluir</app-button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </app-data-state>
+</div>
+
+<app-modal
+  *ngIf="modal"
+  [title]="editingId ? 'Editar servidor SMTP' : 'Novo servidor SMTP'"
+  size="lg"
+  [busy]="saving"
+  (close)="modal = false"
+>
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <p class="error-msg" *ngIf="formError">{{ formError }}</p>
+
+    <div class="rw">
+      <div class="ff">
+        <label for="smtp-name">Nome (apelido) *</label>
+        <input
+          id="smtp-name"
+          formControlName="name"
+          placeholder="Gmail Marketing"
+          [class.is-invalid]="serverErrors.has('name')"
+        />
+        <div class="field-error" *ngIf="fieldError('name')">{{ fieldError('name') }}</div>
+      </div>
+      <div class="ff">
+        <label for="smtp-host">Host *</label>
+        <input
+          id="smtp-host"
+          formControlName="host"
+          placeholder="smtp.gmail.com"
+          [class.is-invalid]="serverErrors.has('host')"
+        />
+        <div class="field-error" *ngIf="fieldError('host')">{{ fieldError('host') }}</div>
+      </div>
+    </div>
+
+    <div class="rw">
+      <div class="ff">
+        <label for="smtp-port">Porta *</label>
+        <input
+          id="smtp-port"
+          type="number"
+          formControlName="port"
+          [class.is-invalid]="serverErrors.has('port')"
+        />
+        <div class="field-error" *ngIf="fieldError('port')">{{ fieldError('port') }}</div>
+      </div>
+      <div class="ff">
+        <label for="smtp-user">Usuário *</label>
+        <input
+          id="smtp-user"
+          formControlName="user"
+          placeholder="voce@gmail.com"
+          [class.is-invalid]="serverErrors.has('user')"
+        />
+        <div class="field-error" *ngIf="fieldError('user')">{{ fieldError('user') }}</div>
+      </div>
+    </div>
+
+    <div class="ff">
+      <label for="smtp-pass">{{ editingId ? 'Senha (deixe vazio para manter)' : 'Senha / App Password *' }}</label>
+      <input
+        id="smtp-pass"
+        type="password"
+        formControlName="password"
+        autocomplete="new-password"
+        [class.is-invalid]="serverErrors.has('password')"
+      />
+      <div class="field-error" *ngIf="fieldError('password')">{{ fieldError('password') }}</div>
+      <p class="hint sub" *ngIf="editingId">
+        Para testar a conexão de um servidor já salvo, informe a senha novamente — ela nunca é devolvida pela API.
+      </p>
+    </div>
+
+    <div class="rw">
+      <div class="ff">
+        <label for="smtp-from-name">Nome do remetente *</label>
+        <input
+          id="smtp-from-name"
+          formControlName="fromName"
+          placeholder="Minha Empresa"
+          [class.is-invalid]="serverErrors.has('fromName')"
+        />
+        <div class="field-error" *ngIf="fieldError('fromName')">{{ fieldError('fromName') }}</div>
+      </div>
+      <div class="ff">
+        <label for="smtp-from-email">Email do remetente *</label>
+        <input
+          id="smtp-from-email"
+          formControlName="fromEmail"
+          placeholder="no-reply@empresa.com"
+          [class.is-invalid]="serverErrors.has('fromEmail')"
+        />
+        <div class="field-error" *ngIf="fieldError('fromEmail')">{{ fieldError('fromEmail') }}</div>
+      </div>
+    </div>
+
+    <div class="rw">
+      <div class="ff">
+        <label for="smtp-daily">Limite diário (0 = sem limite)</label>
+        <input id="smtp-daily" type="number" min="0" formControlName="dailyLimit" />
+      </div>
+      <div class="ff">
+        <label for="smtp-hourly">Limite por hora (0 = sem limite)</label>
+        <input id="smtp-hourly" type="number" min="0" formControlName="hourlyLimit" />
+      </div>
+    </div>
+
+    <label class="check-line">
+      <input type="checkbox" formControlName="secure" />
+      Conexão SSL/TLS direta (porta 465)
+    </label>
+    <label class="check-line">
+      <input type="checkbox" formControlName="isDefault" />
+      Definir como servidor padrão
+    </label>
+  </form>
+
+  <ng-container modal-actions>
+    <app-button variant="outline" [disabled]="!canTest" [loading]="testing" (click)="test()">
+      Testar conexão
+    </app-button>
+    <app-button variant="success" [disabled]="!canTest" [loading]="sendingTest" (click)="sendTestEmail()">
+      ✉ Enviar teste
+    </app-button>
+    <app-button variant="outline" (click)="modal = false">Cancelar</app-button>
+    <app-button variant="primary" [loading]="saving" (click)="save()">Salvar</app-button>
+  </ng-container>
+</app-modal>

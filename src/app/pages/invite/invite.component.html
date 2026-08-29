@@ -1,0 +1,86 @@
+<div class="auth">
+  <div class="auth-card">
+    <app-logo class="brand" variant="full" size="34px" markColor="brand"></app-logo>
+
+    <!-- 1. Validando o convite -->
+    <ng-container *ngIf="state === 'loading'">
+      <p class="sub">{{ isReset ? 'Verificando o link…' : 'Verificando seu convite…' }}</p>
+      <div class="skeleton" aria-hidden="true">
+        <span class="sk sk-label"></span>
+        <span class="sk sk-input"></span>
+        <span class="sk sk-label"></span>
+        <span class="sk sk-input"></span>
+        <span class="sk sk-button"></span>
+      </div>
+      <span class="sr-only" role="status">Verificando o link</span>
+    </ng-container>
+
+    <!-- 2. Convite inválido ou expirado -->
+    <ng-container *ngIf="state === 'invalid'">
+      <p class="sub">{{ isReset ? 'Link indisponível' : 'Convite indisponível' }}</p>
+      <p class="error-msg">{{ formError }}</p>
+      <p class="hint" *ngIf="!isReset">
+        Peça um novo convite ao administrador da sua conta — por segurança, cada link vale por tempo limitado
+        e só pode ser usado uma vez.
+      </p>
+      <p class="hint" *ngIf="isReset">
+        Peça uma nova recuperação na tela de login — por segurança, cada link vale por tempo limitado e só pode
+        ser usado uma vez.
+      </p>
+      <app-button variant="ghost" [fullWidth]="true" (clicked)="goToLogin()">Ir para o login</app-button>
+    </ng-container>
+
+    <!-- 3. Definir a senha -->
+    <ng-container *ngIf="state === 'ready'">
+      <p class="sub">
+        <ng-container *ngIf="isReset">Escolha uma nova senha para sua conta</ng-container>
+        <ng-container *ngIf="!isReset">
+          <ng-container *ngIf="invite?.tenantName">
+            Você foi convidado para <strong>{{ invite?.tenantName }}</strong>
+          </ng-container>
+          <ng-container *ngIf="!invite?.tenantName">Defina sua senha para acessar o painel</ng-container>
+        </ng-container>
+      </p>
+
+      <p class="identity">{{ invite?.email }}</p>
+
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <p class="error-msg" *ngIf="formError">{{ formError }}</p>
+
+        <div class="field">
+          <label for="iv-password">Nova senha</label>
+          <input
+            id="iv-password"
+            type="password"
+            formControlName="password"
+            placeholder="mínimo de 8 caracteres"
+            autocomplete="new-password"
+            [class.is-invalid]="serverErrors.has('password')"
+          />
+          <div class="field-error" *ngIf="fieldError('password')">{{ fieldError('password') }}</div>
+        </div>
+
+        <div class="field">
+          <label for="iv-confirm">Confirme a senha</label>
+          <input
+            id="iv-confirm"
+            type="password"
+            formControlName="confirm"
+            placeholder="••••••••"
+            autocomplete="new-password"
+            [class.is-invalid]="!!fieldError('confirm')"
+          />
+          <div class="field-error" *ngIf="fieldError('confirm')">{{ fieldError('confirm') }}</div>
+        </div>
+
+        <app-button type="submit" variant="primary" [fullWidth]="true" [loading]="loading">
+          {{ isReset ? 'Redefinir senha e entrar' : 'Definir senha e entrar' }}
+        </app-button>
+
+        <p class="hint reset-note" *ngIf="isReset">
+          Ao redefinir, todas as sessões abertas nesta conta são encerradas.
+        </p>
+      </form>
+    </ng-container>
+  </div>
+</div>

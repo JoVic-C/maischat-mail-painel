@@ -1,0 +1,79 @@
+<app-page-title subtitle="Capacidade total da plataforma — a fatia de cada cliente é definida na tela de Clientes">
+  Motor de envio
+</app-page-title>
+
+<div class="card">
+  <app-data-state [loading]="loading" [error]="error" [empty]="false" [skeletonCols]="2" (retry)="load()">
+    <form [formGroup]="form" (ngSubmit)="save()" class="engine-form">
+      <p class="error-msg" *ngIf="formError">{{ formError }}</p>
+
+      <div class="ff">
+        <label for="pf-concurrency">Envios simultâneos *</label>
+        <input
+          id="pf-concurrency"
+          type="number"
+          formControlName="workerConcurrency"
+          [class.is-invalid]="serverErrors.has('workerConcurrency')"
+        />
+        <p class="hint sub" *ngIf="settings">
+          Entre {{ settings.bounds.workerConcurrency.min }} e {{ settings.bounds.workerConcurrency.max }}.
+          Quantos emails o servidor processa ao mesmo tempo.
+        </p>
+        <div class="field-error" *ngIf="fieldError('workerConcurrency')">{{ fieldError('workerConcurrency') }}</div>
+      </div>
+
+      <div class="ff">
+        <label for="pf-rate">Emails por minuto *</label>
+        <input
+          id="pf-rate"
+          type="number"
+          formControlName="ratePerMinute"
+          [class.is-invalid]="serverErrors.has('ratePerMinute')"
+        />
+        <p class="hint sub" *ngIf="settings">
+          Entre {{ settings.bounds.ratePerMinute.min }} e {{ settings.bounds.ratePerMinute.max }}.
+          Teto da fila inteira — equivale a <b>{{ perHour | number }}</b> por hora.
+        </p>
+        <div class="field-error" *ngIf="fieldError('ratePerMinute')">{{ fieldError('ratePerMinute') }}</div>
+      </div>
+
+      <div class="impact">
+        <strong>⚠️ O que estes números afetam</strong>
+        <ul>
+          <li>
+            <b>Envios simultâneos</b> é recurso compartilhado: o motor roda junto com a API, então
+            aumentar demais deixa o <b>painel de todos os clientes</b> mais lento.
+          </li>
+          <li>
+            <b>Emails por minuto</b> é o teto somado de todos os clientes. Passar do que o seu provedor
+            SMTP aceita gera recusa e <b>queima a reputação do domínio</b>.
+          </li>
+          <li>
+            Estes números são a <b>piscina</b> repartida entre os clientes: em <b>Clientes → limites</b> você reserva
+            quanto dela cada um pode ocupar. Um cliente sem limite próprio pode usar a piscina inteira.
+          </li>
+          <li>
+            O limite de cada servidor SMTP (por hora e por dia) continua sendo do cliente, na tela
+            de <b>SMTP</b>. Vale o mais restritivo dos dois.
+          </li>
+          <li>Ao salvar, o motor é reiniciado: os envios em andamento terminam antes.</li>
+        </ul>
+      </div>
+
+      <p class="muted last-change" *ngIf="settings?.updatedByEmail">
+        Última alteração por <b>{{ settings?.updatedByEmail }}</b>
+      </p>
+
+      <div class="actions">
+        <app-button
+          type="submit"
+          variant="primary"
+          [loading]="saving"
+          [disabled]="form.pristine"
+        >
+          Salvar e reiniciar o motor
+        </app-button>
+      </div>
+    </form>
+  </app-data-state>
+</div>

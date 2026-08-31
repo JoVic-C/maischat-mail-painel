@@ -1,4 +1,10 @@
 node_modules
+.env*
 dist
 .angular
 *.log
+*.md
+docker-compose*
+.git
+.vscode
+.idea

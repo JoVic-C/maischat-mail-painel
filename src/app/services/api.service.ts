@@ -9,9 +9,10 @@ import {
   ContactPage,
   ContactQuery,
   CreateTenantInput,
+  CreateTenantResult,
   FailureRow,
   DashboardStats,
-  InvalidRow,
+  ImportJob,
   InviteLink,
   InvitePreview,
   List,
@@ -36,18 +37,9 @@ import {
   TenantSummary,
   UpdateTenantInput,
   UploadedImage,
-  ValidateRowEvent,
-  ValidatedRow,
+  OpenImport,
 } from '../models';
 import { AuthService } from './auth.service';
-
-/** Callbacks do stream de validação de CSV (SSE). */
-export interface ValidateStreamHandlers {
-  start?: (total: number) => void;
-  row?: (row: ValidateRowEvent) => void;
-  done?: (summary: { total: number }) => void;
-  error?: (message: string) => void;
-}
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -113,77 +105,40 @@ export class ApiService {
   bulkDeleteContacts(ids: string[]): Observable<ApiMessage & { deleted: number }> {
     return this.http.post<ApiMessage & { deleted: number }>(`${this.api}/contacts/bulk-delete`, { ids });
   }
-  importValidated(rows: ValidatedRow[], listIds: string[]): Observable<ApiMessage & { imported: number }> {
-    return this.http.post<ApiMessage & { imported: number }>(`${this.api}/contacts/import-validated`, {
-      rows,
-      listIds,
-    });
+
+  // ─── Importação de contatos em massa ───
+  // O CSV sobe como arquivo e o servidor devolve um job. Nenhuma chamada daqui
+  // carrega linhas de contato: elas ficam no servidor do upload até a gravação.
+
+  /** Envia o arquivo e devolve o job criado. Aceita um Blob, para o CSV colado na tela. */
+  startImport(file: Blob, filename: string, listIds: string[]): Observable<{ id: string; status: string }> {
+    const fd = new FormData();
+    fd.append('file', file, filename);
+    // multipart não tem array: vai como lista separada por vírgula.
+    if (listIds.length) fd.append('listIds', listIds.join(','));
+    return this.http.post<{ id: string; status: string }>(`${this.api}/contacts/import`, fd);
   }
-  exportInvalidContacts(rows: InvalidRow[]): Observable<Blob> {
-    return this.http.post(`${this.api}/contacts/invalid-export`, { rows }, { responseType: 'blob' });
+
+  getImport(id: string): Observable<ImportJob> {
+    return this.http.get<ImportJob>(`${this.api}/contacts/import/${id}`);
   }
 
-  /**
-   * Valida o CSV em streaming (SSE). O HttpClient não lida bem com streaming,
-   * então usamos fetch() lendo o corpo em pedaços e emitindo cada evento via callbacks.
-   */
-  async validateCsvStream(
-    csv: string,
-    listIds: string[],
-    on: ValidateStreamHandlers,
-    signal?: AbortSignal
-  ): Promise<void> {
-    try {
-      // O fetch NÃO passa pelo HttpInterceptor: token e cliente vão manualmente.
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      const token = this.auth.token;
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-      const tenantId = this.auth.activeTenantId;
-      if (tenantId && this.auth.isSuperadmin) headers['X-Tenant-Id'] = tenantId;
+  /** Importações ainda em aberto — deixa a tela retomar um job depois de recarregar. */
+  getOpenImports(): Observable<OpenImport[]> {
+    return this.http.get<OpenImport[]>(`${this.api}/contacts/import/open`);
+  }
 
-      const res = await fetch(`${this.api}/contacts/validate-stream`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ csv, listIds }),
-        signal,
-      });
-      if (!res.ok || !res.body) {
-        on.error?.(res.status === 401 ? 'Sessão expirada. Faça login novamente.' : 'Falha ao iniciar a validação.');
-        return;
-      }
+  confirmImport(id: string, listIds: string[]): Observable<ApiMessage & { id: string }> {
+    return this.http.post<ApiMessage & { id: string }>(`${this.api}/contacts/import/${id}/confirm`, { listIds });
+  }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
+  cancelImport(id: string): Observable<ApiMessage> {
+    return this.http.post<ApiMessage>(`${this.api}/contacts/import/${id}/cancel`, {});
+  }
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const parts = buffer.split('\n\n');
-        buffer = parts.pop() ?? '';
-        for (const part of parts) {
-          const line = part.trim();
-          if (!line.startsWith('data:')) continue;
-          const json = line.slice(5).trim();
-          if (!json) continue;
-          let evt: { type: string; total?: number; message?: string };
-          try {
-            evt = JSON.parse(json);
-          } catch {
-            continue;
-          }
-          if (evt.type === 'start') on.start?.(evt.total ?? 0);
-          else if (evt.type === 'row') on.row?.(evt as unknown as ValidateRowEvent);
-          else if (evt.type === 'done') on.done?.({ total: evt.total ?? 0 });
-          else if (evt.type === 'error') on.error?.(evt.message ?? 'Erro na validação.');
-        }
-      }
-    } catch (e) {
-      if ((e as Error)?.name === 'AbortError') return;
-      on.error?.('Erro na validação.');
-    }
+  /** Relatório dos recusados, montado no servidor a partir do resultado guardado. */
+  downloadImportInvalid(id: string): Observable<Blob> {
+    return this.http.get(`${this.api}/contacts/import/${id}/invalid`, { responseType: 'blob' });
   }
 
   // ─── Templates ───
@@ -354,8 +309,8 @@ export class ApiService {
   getTenants(): Observable<TenantSummary[]> {
     return this.http.get<TenantSummary[]>(`${this.api}/tenants`);
   }
-  createTenant(data: CreateTenantInput): Observable<ApiMessage> {
-    return this.http.post<ApiMessage>(`${this.api}/tenants`, data);
+  createTenant(data: CreateTenantInput): Observable<ApiMessage & { tenant: CreateTenantResult }> {
+    return this.http.post<ApiMessage & { tenant: CreateTenantResult }>(`${this.api}/tenants`, data);
   }
   updateTenant(id: string, data: UpdateTenantInput): Observable<ApiMessage> {
     return this.http.put<ApiMessage>(`${this.api}/tenants/${id}`, data);

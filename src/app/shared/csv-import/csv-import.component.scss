@@ -32,3 +32,43 @@
 
 .live-box { max-height: 240px; overflow-y: auto; border: 1px solid var(--br); border-radius: 8px; }
 .live .muted { margin-top: 6px; }
+
+/* Área de escolha do arquivo. O input nativo fica escondido atrás do label. */
+.dropzone {
+  display: flex; align-items: center; gap: 10px;
+  padding: 18px 16px; cursor: pointer;
+  border: 1.5px dashed var(--br); border-radius: 10px;
+  background: var(--nl); color: var(--t2);
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+.dropzone:hover { border-color: var(--o); color: var(--n); }
+.dropzone:focus-within { border-color: var(--o); box-shadow: 0 0 0 3px var(--ol, rgba(0,0,0,0.06)); }
+.dropzone.filled { border-style: solid; border-color: var(--gn); background: transparent; color: var(--n); }
+.dropzone input[type='file'] {
+  position: absolute; width: 1px; height: 1px; opacity: 0;
+  overflow: hidden; clip: rect(0 0 0 0);
+}
+.dz-icon { font-size: 20px; line-height: 1; }
+.dz-text { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+
+.file-line { margin-bottom: 10px; }
+
+/*
+  Enquanto o worker roda não há porcentagem confiável — o total de linhas só é
+  conhecido no fim do arquivo. A barra corre para mostrar que há trabalho
+  acontecendo, sem fingir que sabe quanto falta.
+*/
+.progress-bar.full { width: 100%; }
+.progress-bar.indeterminate {
+  width: 40%;
+  animation: csv-import-slide 1.15s ease-in-out infinite;
+}
+@keyframes csv-import-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+
+/* Respeita quem pediu menos animação: a barra fica cheia e estática. */
+@media (prefers-reduced-motion: reduce) {
+  .progress-bar.indeterminate { width: 100%; animation: none; }
+}

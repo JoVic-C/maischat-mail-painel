@@ -1,27 +1,34 @@
-import { Component, EventEmitter, Input, NgZone, OnDestroy, OnInit, Output } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { InvalidRow, List, RowKind, ValidatedRow } from '../../models';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { FormBuilder, FormGroup } from '@angular/forms';
+import { Subscription, switchMap, timer } from 'rxjs';
+import { ImportCounters, ImportJob, ImportSampleRow, List } from '../../models';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../toast/toast.service';
 
-interface LiveRow {
-  email: string;
-  kind: RowKind;
-  reason?: string;
+/** De quanto em quanto tempo o progresso do job é consultado. */
+const POLL_MS = 1200;
+
+function emptyCounters(): ImportCounters {
+  return { rows: 0, new: 0, addToList: 0, inList: 0, already: 0, invalid: 0 };
 }
 
 /**
- * Importador de contatos reutilizável: valida um CSV ao vivo (SSE) e importa os corretos.
+ * Importador de contatos reutilizável.
  * Usado tanto na tela de Contatos quanto no passo 2 de "Nova lista".
  *
  * - Sem `fixedListId`: mostra o seletor de lista de destino.
  * - Com `fixedListId`: destino travado nessa lista (esconde o seletor).
+ *
+ * O arquivo sobe para o servidor e é processado por um worker; esta tela só
+ * acompanha contadores. Nenhuma linha de contato passa por aqui, o que é o que
+ * permite importar listas de centenas de milhares de contatos sem travar o
+ * navegador nem estourar o limite de corpo da requisição.
  */
 @Component({
-    selector: 'app-csv-import',
-    templateUrl: './csv-import.component.html',
-    styleUrls: ['./csv-import.component.scss'],
-    standalone: false
+  selector: 'app-csv-import',
+  templateUrl: './csv-import.component.html',
+  styleUrls: ['./csv-import.component.scss'],
+  standalone: false,
 })
 export class CsvImportComponent implements OnInit, OnDestroy {
   /** Listas disponíveis para o seletor de destino (ignorado quando fixedListId está setado). */
@@ -39,61 +46,77 @@ export class CsvImportComponent implements OnInit, OnDestroy {
   @Output() cancel = new EventEmitter<void>();
 
   form: FormGroup;
-  phase: 'form' | 'validating' | 'done' = 'form';
+  /**
+   * form       → escolhendo arquivo/colando
+   * validating → worker classificando as linhas
+   * done       → validado, esperando a confirmação
+   * importing  → worker gravando no banco
+   * finished   → concluído
+   */
+  phase: 'form' | 'validating' | 'done' | 'importing' | 'finished' = 'form';
 
-  streamTotal = 0;
-  streamProcessed = 0;
-  streamNew = 0;
-  streamAdd = 0;
-  streamInList = 0;
-  streamAlready = 0;
-  streamInvalid = 0;
+  jobId = '';
+  jobName = '';
+  counters: ImportCounters = emptyCounters();
+  sample: ImportSampleRow[] = [];
+  imported = 0;
+  skipped = 0;
 
-  visibleRows: LiveRow[] = [];
-  validRows: ValidatedRow[] = [];
-  invalidRows: InvalidRow[] = [];
-
-  importingValid = false;
+  file: File | null = null;
+  uploading = false;
   downloading = false;
+  /** Lista com que a validação foi feita — trocar de lista invalida o resultado. */
   validatedListId = '';
 
-  private abortCtrl?: AbortController;
-  private readonly LIVE_LIMIT = 120;
+  private poll?: Subscription;
 
   constructor(
     private api: ApiService,
     private toast: ToastService,
-    private zone: NgZone,
     private fb: FormBuilder
   ) {
-    this.form = this.fb.group({
-      csv: ['', Validators.required],
-      listId: [''],
-    });
+    this.form = this.fb.group({ csv: [''], listId: [''] });
   }
 
   ngOnInit(): void {
     if (this.fixedListId) this.form.patchValue({ listId: this.fixedListId });
+    this.resumeOpenImport();
   }
 
   ngOnDestroy(): void {
-    this.abortCtrl?.abort();
+    // Só para de acompanhar — o job continua no servidor, e é assim que ele
+    // sobrevive a fechar o modal ou recarregar a página.
+    this.poll?.unsubscribe();
   }
 
   get importListId(): string {
     return String(this.form.value.listId || '');
   }
 
-  get progressPct(): number {
-    return this.streamTotal ? Math.round((this.streamProcessed / this.streamTotal) * 100) : 0;
+  get listIds(): string[] {
+    return this.importListId ? [this.importListId] : [];
   }
 
   get importableCount(): number {
-    return this.streamNew + this.streamAdd;
+    return this.counters.new + this.counters.addToList;
   }
 
-  get listChanged(): boolean {
-    return this.importListId !== this.validatedListId;
+  get ignoredCount(): number {
+    return this.counters.inList + this.counters.already;
+  }
+
+  get busy(): boolean {
+    return this.phase === 'validating' || this.phase === 'importing';
+  }
+
+  /** Nome do arquivo escolhido, ou o rótulo do conteúdo colado. */
+  get sourceLabel(): string {
+    if (this.file) return this.file.name;
+    return this.form.value.csv ? 'Conteúdo colado' : '';
+  }
+
+  get canSubmit(): boolean {
+    return !this.uploading && (!!this.file || !!String(this.form.value.csv || '').trim());
   }
 
   /**
@@ -101,126 +124,96 @@ export class CsvImportComponent implements OnInit, OnDestroy {
    * ("já na lista" vs "+ à lista"), então o resultado anterior deixa de valer.
    */
   get needsRevalidate(): boolean {
-    return this.listChanged && this.streamAdd + this.streamInList + this.streamAlready > 0;
-  }
-
-  private reset(): void {
-    this.phase = 'form';
-    this.streamTotal = 0;
-    this.streamProcessed = 0;
-    this.streamNew = 0;
-    this.streamAdd = 0;
-    this.streamInList = 0;
-    this.streamAlready = 0;
-    this.streamInvalid = 0;
-    this.visibleRows = [];
-    this.validRows = [];
-    this.invalidRows = [];
-    this.importingValid = false;
-    this.validatedListId = '';
-  }
-
-  startValidation(): void {
-    const csv = String(this.form.value.csv || '');
-    const listId = this.importListId;
-    if (!csv.trim()) return;
-
-    this.reset();
-    this.phase = 'validating';
-    this.abortCtrl = new AbortController();
-    this.validatedListId = listId;
-    const listIds = listId ? [listId] : [];
-
-    this.api.validateCsvStream(
-      csv,
-      listIds,
-      {
-        start: (total) =>
-          this.zone.run(() => {
-            this.streamTotal = total;
-          }),
-        row: (r) =>
-          this.zone.run(() => {
-            this.streamProcessed++;
-            switch (r.kind) {
-              case 'new':
-                this.streamNew++;
-                this.validRows.push({
-                  email: r.email,
-                  name: r.name,
-                  phone: r.phone,
-                  company: r.company,
-                  metadata: r.metadata,
-                });
-                break;
-              case 'add-to-list':
-                this.streamAdd++;
-                this.validRows.push({
-                  email: r.email,
-                  name: r.name,
-                  phone: r.phone,
-                  company: r.company,
-                  metadata: r.metadata,
-                });
-                break;
-              case 'in-list':
-                this.streamInList++;
-                break;
-              case 'already':
-                this.streamAlready++;
-                break;
-              default:
-                this.streamInvalid++;
-                this.invalidRows.push({ email: r.email, name: r.name, reason: r.reason });
-            }
-            this.visibleRows.push({ email: r.email, kind: r.kind, reason: r.reason });
-            if (this.visibleRows.length > this.LIVE_LIMIT) this.visibleRows.shift();
-          }),
-        done: () =>
-          this.zone.run(() => {
-            this.phase = 'done';
-          }),
-        error: (msg) =>
-          this.zone.run(() => {
-            this.phase = 'form';
-            this.toast.error(msg);
-          }),
-      },
-      this.abortCtrl.signal
+    return (
+      this.phase === 'done' &&
+      this.importListId !== this.validatedListId &&
+      this.counters.addToList + this.counters.inList + this.counters.already > 0
     );
   }
 
-  cancelValidation(): void {
-    this.abortCtrl?.abort();
-    this.phase = 'form';
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.file = input.files?.[0] ?? null;
+    // Arquivo e texto colado são a mesma entrada por caminhos diferentes: escolher
+    // um limpa o outro, para não restar dúvida sobre o que será enviado.
+    if (this.file) this.form.patchValue({ csv: '' });
   }
 
-  importValid(): void {
-    if (!this.validRows.length) return;
-    this.importingValid = true;
-    const listIds = this.importListId ? [this.importListId] : [];
-    this.api.importValidated(this.validRows, listIds).subscribe({
+  /** Sobe o CSV e passa a acompanhar o job. */
+  startValidation(): void {
+    const pasted = String(this.form.value.csv || '').trim();
+    if (!this.file && !pasted) return;
+
+    // O conteúdo colado vira arquivo: um único caminho no servidor, e o texto
+    // deixa de trafegar dentro de um JSON (que era o que estourava o limite).
+    const blob = this.file ?? new Blob([pasted], { type: 'text/csv' });
+    const filename = this.file?.name ?? 'contatos-colados.csv';
+
+    this.uploading = true;
+    this.resetProgress();
+    this.validatedListId = this.importListId;
+
+    this.api.startImport(blob, filename, this.listIds).subscribe({
       next: (res) => {
-        this.importingValid = false;
-        this.toast.success(res.message);
-        this.finished.emit({ imported: res.imported ?? 0 });
+        this.uploading = false;
+        this.jobId = res.id;
+        this.jobName = filename;
+        this.phase = 'validating';
+        this.startPolling();
       },
       error: (err) => {
-        this.importingValid = false;
+        this.uploading = false;
         this.toast.apiError(err);
       },
     });
   }
 
+  confirmImport(): void {
+    if (!this.jobId || !this.importableCount) return;
+    this.phase = 'importing';
+    this.api.confirmImport(this.jobId, this.listIds).subscribe({
+      next: () => this.startPolling(),
+      error: (err) => {
+        this.phase = 'done';
+        this.toast.apiError(err);
+      },
+    });
+  }
+
+  cancelJob(): void {
+    if (!this.jobId) {
+      this.phase = 'form';
+      return;
+    }
+    this.api.cancelImport(this.jobId).subscribe({
+      next: () => {
+        this.stopPolling();
+        this.resetProgress();
+        this.phase = 'form';
+      },
+      error: (err) => this.toast.apiError(err),
+    });
+  }
+
+  /** Volta ao formulário mantendo o arquivo, para revalidar com outra lista. */
+  revalidate(): void {
+    this.stopPolling();
+    this.resetProgress();
+    this.phase = 'form';
+  }
+
   downloadInvalid(): void {
+    if (!this.jobId) return;
     this.downloading = true;
-    this.api.exportInvalidContacts(this.invalidRows).subscribe({
+    this.api.downloadImportInvalid(this.jobId).subscribe({
       next: (blob) => {
         this.downloading = false;
+        // Acima de 20 mil recusados o servidor devolve CSV em vez de xlsx.
+        const isCsv = blob.type.includes('csv') || blob.type.includes('text');
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'contatos-incorretos.xlsx';
+        a.download = `contatos-incorretos.${isCsv ? 'csv' : 'xlsx'}`;
         a.click();
         URL.revokeObjectURL(url);
       },
@@ -231,8 +224,97 @@ export class CsvImportComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** O rótulo do badge vem de CSV_ROW_LABELS; o motivo da recusa entra como tooltip. */
-  rowHint(row: LiveRow): string {
+  /** O motivo da recusa entra como tooltip do badge. */
+  rowHint(row: ImportSampleRow): string {
     return row.reason ?? '';
+  }
+
+  /**
+   * Reencontra uma importação deixada em aberto (fechou o modal, recarregou a
+   * página, caiu a rede) e volta a acompanhá-la de onde estava.
+   */
+  private resumeOpenImport(): void {
+    this.api.getOpenImports().subscribe({
+      next: (open) => {
+        // Com destino travado (wizard de nova lista), não se retoma nada: o job
+        // mais recente pode ser de OUTRA lista, e prender a tela a ele importaria
+        // contatos para o lugar errado. A lista acabou de ser criada, então não há
+        // importação anterior dela para recuperar.
+        const job = this.fixedListId ? undefined : open[0];
+        if (!job || this.jobId) return;
+        this.jobId = job.id;
+        this.jobName = job.originalName;
+        this.phase = job.status === 'importing' ? 'importing' : 'validating';
+        this.startPolling();
+      },
+      // Falhar aqui não impede começar uma importação nova: segue em silêncio.
+      error: () => undefined,
+    });
+  }
+
+  private startPolling(): void {
+    this.stopPolling();
+    this.poll = timer(0, POLL_MS)
+      .pipe(switchMap(() => this.api.getImport(this.jobId)))
+      .subscribe({
+        next: (job) => this.applyJob(job),
+        error: (err) => {
+          this.stopPolling();
+          this.toast.apiError(err);
+        },
+      });
+  }
+
+  private stopPolling(): void {
+    this.poll?.unsubscribe();
+    this.poll = undefined;
+  }
+
+  private applyJob(job: ImportJob): void {
+    this.counters = job.counters ?? emptyCounters();
+    this.sample = job.sample ?? [];
+    this.imported = job.imported ?? 0;
+    this.skipped = job.skipped ?? 0;
+    if (job.originalName) this.jobName = job.originalName;
+    // A lista com que o servidor validou é a verdade — inclusive ao retomar um
+    // job que esta aba nunca viu começar.
+    this.validatedListId = job.listIds?.[0] ?? '';
+    if (!this.fixedListId && this.busy) this.form.patchValue({ listId: this.validatedListId }, { emitEvent: false });
+
+    switch (job.status) {
+      case 'validated':
+        this.stopPolling();
+        this.phase = 'done';
+        break;
+      case 'done':
+        this.stopPolling();
+        this.phase = 'finished';
+        this.toast.success(`${this.imported} contato(s) importado(s).`);
+        this.finished.emit({ imported: this.imported });
+        break;
+      case 'failed':
+        this.stopPolling();
+        this.phase = 'form';
+        this.toast.error(job.error || 'Falha ao processar a importação.');
+        break;
+      case 'canceled':
+        this.stopPolling();
+        this.phase = 'form';
+        break;
+      case 'importing':
+        this.phase = 'importing';
+        break;
+      default:
+        this.phase = 'validating';
+    }
+  }
+
+  private resetProgress(): void {
+    this.jobId = '';
+    this.jobName = '';
+    this.counters = emptyCounters();
+    this.sample = [];
+    this.imported = 0;
+    this.skipped = 0;
   }
 }

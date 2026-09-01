@@ -10,3 +10,23 @@
 .name { font-weight: 600; }
 .tag { margin-left: 6px; }
 tr.row-active td { background: var(--oxl); }
+
+/* Caixa do link de acesso do cliente recém-criado — mesmo formato da tela de usuários. */
+.inv-intro { font-size: 13.5px; color: var(--t2); margin: 0 0 14px; line-height: 1.55; }
+
+.inv-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg);
+  border: 1px solid var(--br);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.inv-link code {
+  flex: 1;
+  font-size: 12px;
+  color: var(--t);
+  word-break: break-all;
+  line-height: 1.45;
+}

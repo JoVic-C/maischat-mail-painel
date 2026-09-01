@@ -90,6 +90,23 @@ export interface UpdateTenantInput {
   sendingLimits?: Partial<SendingLimits>;
 }
 
+/** Link de acesso gerado quando o cliente é criado (boas-vindas ao admin dele). */
+export interface TenantWelcome {
+  url: string;
+  expiresAt: string;
+  /** `reset` quando o superadmin definiu a senha; `invite` quando o admin vai criá-la. */
+  kind: 'invite' | 'reset';
+  emailSent: boolean;
+}
+
+/** Retorno da criação de cliente. O link volta para repasse manual se o email não sair. */
+export interface CreateTenantResult {
+  id: string;
+  slug: string;
+  adminEmail: string;
+  welcome?: TenantWelcome;
+}
+
 export interface CreateTenantInput {
   name: string;
   slug: string;
@@ -191,34 +208,49 @@ export interface ContactQuery {
   limit?: number;
 }
 
-/** Linha reprovada na validação do CSV (vira o Excel de incorretos). */
-export interface InvalidRow {
-  email: string;
-  name?: string;
-  reason?: string;
-}
-
-/** Linha aprovada na validação, pronta para importar sem refazer o DNS. */
-export interface ValidatedRow {
-  email: string;
-  name?: string;
-  phone?: string;
-  company?: string;
-  metadata?: Record<string, string>;
-}
-
 export type RowKind = 'new' | 'add-to-list' | 'in-list' | 'already' | 'invalid';
 
-export interface ValidateRowEvent {
-  type: 'row';
-  index: number;
+/** Situação de uma importação de contatos em massa. */
+export type ImportStatus = 'uploaded' | 'validating' | 'validated' | 'importing' | 'done' | 'failed' | 'canceled';
+
+/** Contadores agregados da importação — substituem o antigo evento por linha. */
+export interface ImportCounters {
+  rows: number;
+  new: number;
+  addToList: number;
+  inList: number;
+  already: number;
+  invalid: number;
+}
+
+/** Amostra das primeiras linhas, para dar rosto ao progresso. */
+export interface ImportSampleRow {
   email: string;
-  name: string;
-  phone: string;
-  company: string;
-  metadata: Record<string, string>;
   kind: RowKind;
   reason?: string;
+}
+
+/** Estado completo de uma importação, consultado enquanto o job roda no servidor. */
+export interface ImportJob {
+  id: string;
+  status: ImportStatus;
+  originalName: string;
+  sizeBytes: number;
+  listIds: string[];
+  counters: ImportCounters;
+  imported: number;
+  skipped: number;
+  sample: ImportSampleRow[];
+  error: string;
+  createdAt: string;
+}
+
+/** Resumo de uma importação ainda aberta (usado para retomar após recarregar a página). */
+export interface OpenImport {
+  id: string;
+  status: ImportStatus;
+  originalName: string;
+  createdAt: string;
 }
 
 // ─── Templates ───

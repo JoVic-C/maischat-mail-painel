@@ -186,3 +186,38 @@
     <app-button variant="primary" [loading]="savingLimits" (click)="saveLimits()">Salvar limites</app-button>
   </ng-container>
 </app-modal>
+
+<!-- Link de acesso do cliente recém-criado. Fica disponível para o superadmin repassar
+     por outro canal quando o email de boas-vindas não sai (plataforma sem SMTP, caixa
+     recusando, domínio novo em quarentena). -->
+<app-modal *ngIf="welcome" title="Acesso do novo cliente" (close)="welcome = null">
+  <p class="inv-intro">
+    Email de boas-vindas enviado para <strong>{{ welcomeFor }}</strong
+    ><span *ngIf="welcome.emailSent === false">
+      — mas o email <b>não pôde ser enviado</b>, então repasse o link abaixo</span
+    >.
+  </p>
+
+  <p class="inv-intro" *ngIf="welcome.kind === 'reset'">
+    A senha que você definiu continua valendo até o administrador usar o link — e você não fica sabendo a nova.
+  </p>
+  <p class="inv-intro" *ngIf="welcome.kind === 'invite'">
+    A conta só fica utilizável depois que o administrador definir a senha por este link.
+  </p>
+
+  <div class="inv-link">
+    <code>{{ welcome.url }}</code>
+    <app-button variant="outline" size="sm" (click)="copyWelcomeLink()">
+      {{ linkCopied ? 'copiado ✓' : 'copiar' }}
+    </app-button>
+  </div>
+
+  <p class="hint sub">
+    O link vale até {{ welcome.expiresAt | date: 'dd/MM/yyyy HH:mm' }}, só pode ser usado uma vez e dá acesso à
+    conta — trate como senha.
+  </p>
+
+  <ng-container modal-actions>
+    <app-button variant="primary" (click)="welcome = null">Fechar</app-button>
+  </ng-container>
+</app-modal>

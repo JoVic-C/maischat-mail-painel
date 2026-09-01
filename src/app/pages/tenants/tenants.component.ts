@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { CreateTenantInput, PlatformSettings, TenantSummary } from '../../models';
+import { CreateTenantInput, PlatformSettings, TenantSummary, TenantWelcome } from '../../models';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { ConfirmService } from '../../shared/confirm/confirm.service';
@@ -97,6 +97,26 @@ export class TenantsComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Link de acesso do cliente recém-criado. Mostrado sempre: confirma para onde o
+   * email foi e serve de plano B quando a entrega falha.
+   */
+  welcome: TenantWelcome | null = null;
+  welcomeFor = '';
+  linkCopied = false;
+
+  /** Copia o link para a área de transferência, com retorno visual. */
+  async copyWelcomeLink(): Promise<void> {
+    if (!this.welcome) return;
+    try {
+      await navigator.clipboard.writeText(this.welcome.url);
+      this.linkCopied = true;
+      setTimeout(() => (this.linkCopied = false), 2200);
+    } catch {
+      this.toast.error('Não foi possível copiar. Selecione o link e copie manualmente.');
+    }
+  }
+
   openCreate(): void {
     this.formError = '';
     this.serverErrors.clear();
@@ -129,6 +149,11 @@ export class TenantsComponent implements OnInit, OnDestroy {
         this.saving = false;
         this.modal = false;
         this.toast.success(res.message);
+        // O email é best-effort. O link fica à mão para o superadmin repassar por
+        // outro canal caso a entrega falhe (plataforma ainda sem SMTP, caixa recusando).
+        this.welcome = res.tenant?.welcome ?? null;
+        this.welcomeFor = res.tenant?.adminEmail ?? '';
+        this.linkCopied = false;
         this.load();
       },
       error: (err) => {

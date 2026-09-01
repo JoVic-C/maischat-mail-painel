@@ -111,7 +111,11 @@ export interface CreateTenantInput {
   name: string;
   slug: string;
   adminEmail: string;
-  adminPassword: string;
+  /**
+   * Opcional e NÃO usada pelo painel: o admin define a própria senha pelo link do
+   * email de boas-vindas. Continua na API para scripts e provisionamento automatizado.
+   */
+  adminPassword?: string;
   adminName?: string;
 }
 

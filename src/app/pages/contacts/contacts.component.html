@@ -2,7 +2,7 @@
   <app-page-title [subtitle]="total + ' contato(s) · busca por nome, email ou empresa'">Contatos</app-page-title>
 
   <div class="head-actions">
-    <app-button variant="outline" (click)="openImport()">Importar CSV</app-button>
+    <app-button variant="outline" (click)="openImport()">Importar contatos</app-button>
     <app-button variant="primary" (click)="openCreate()">+ Novo contato</app-button>
   </div>
 </div>
@@ -160,10 +160,10 @@
   </ng-container>
 </app-modal>
 
-<!-- Importar CSV (widget compartilhado) -->
+<!-- Importação de contatos, CSV ou Excel (widget compartilhado) -->
 <app-modal
   *ngIf="importModal"
-  title="Importar e higienizar CSV"
+  title="Importar e higienizar contatos"
   size="lg"
   [dismissOnBackdrop]="false"
   (close)="closeImport()"

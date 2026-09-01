@@ -49,7 +49,17 @@
   overflow: hidden; clip: rect(0 0 0 0);
 }
 .dz-icon { font-size: 20px; line-height: 1; }
-.dz-text { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+/* O dropzone é um <label> e cai na regra global `.ff label`, que deixa rótulos de
+   campo em CAIXA ALTA com letra minúscula. Um nome de arquivo não é rótulo: precisa
+   sair exatamente como o usuário o vê no computador dele. */
+.dz-text {
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  text-transform: none;
+  letter-spacing: normal;
+  color: inherit;
+}
 
 .file-line { margin-bottom: 10px; }
 

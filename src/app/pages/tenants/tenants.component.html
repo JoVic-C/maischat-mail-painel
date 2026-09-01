@@ -28,48 +28,64 @@
         <thead>
           <tr>
             <th>Cliente</th>
-            <th>Identificador</th>
             <th>Situação</th>
-            <th>Usuários</th>
-            <th>Contatos</th>
-            <th>Campanhas</th>
+            <th class="ta-right num-col">Usuários</th>
+            <th class="ta-right num-col">Contatos</th>
+            <th class="ta-right num-col">Campanhas</th>
             <th class="ta-right">Ações</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let t of tenants" [class.row-active]="t.id === auth.activeTenantId">
-            <td class="name">
-              {{ t.name }}
-              <span class="badge purple tag" *ngIf="t.id === auth.activeTenantId">operando</span>
+            <!-- Nome e identificador na mesma célula: o slug é atributo do cliente, não
+                 um dado que se compare entre linhas — como coluna, só roubava largura. -->
+            <td>
+              <div class="cli">
+                <span class="cli-name">{{ t.name }}</span>
+                <span class="badge purple tag" *ngIf="t.id === auth.activeTenantId">operando</span>
+              </div>
+              <div class="cli-slug">{{ t.slug }}</div>
             </td>
-            <td class="muted">{{ t.slug }}</td>
             <td><app-status-badge kind="active" [value]="t.isActive ? 'active' : 'inactive'"></app-status-badge></td>
-            <td>{{ t.users }}</td>
-            <td>{{ t.contacts }}</td>
-            <td>{{ t.campaigns }}</td>
+            <td class="ta-right num" [class.zero]="!t.users">{{ t.users }}</td>
+            <td class="ta-right num" [class.zero]="!t.contacts">{{ t.contacts | number }}</td>
+            <td class="ta-right num" [class.zero]="!t.campaigns">{{ t.campaigns }}</td>
             <td class="ta-right row-actions">
-              <app-button
-                variant="primary"
-                size="sm"
-                [disabled]="!t.isActive"
-                [title]="t.isActive ? 'Operar o painel neste cliente' : 'Cliente desativado'"
-                (click)="operate(t)"
-              >
-                operar
-              </app-button>
-              <app-button variant="outline" size="sm" (click)="rename(t)">renomear</app-button>
-              <app-button
-                variant="outline"
-                size="sm"
-                (click)="openLimits(t)"
-                title="Fatia da capacidade de envio reservada a este cliente"
-              >
-                limites
-              </app-button>
-              <app-button variant="outline" size="sm" (click)="toggleActive(t)">
-                {{ t.isActive ? 'desativar' : 'reativar' }}
-              </app-button>
-              <app-button variant="danger" size="sm" (click)="remove(t)">excluir</app-button>
+              <div class="acts">
+                <app-button
+                  variant="primary"
+                  size="sm"
+                  [disabled]="!t.isActive"
+                  [title]="t.isActive ? 'Operar o painel neste cliente' : 'Cliente desativado'"
+                  (click)="operate(t)"
+                >
+                  operar
+                </app-button>
+
+                <!-- O resto atrás do menu: uma linha com cinco botões de mesmo peso
+                     quebrava em duas fileiras e deixava 'excluir' como o elemento mais
+                     forte da tela — justamente a ação mais rara e irreversível. -->
+                <app-row-menu [label]="'Ações de ' + t.name">
+                  <button class="menu-item" type="button" (click)="rename(t)">
+                    Renomear
+                  </button>
+                  <button
+                    class="menu-item"
+                    type="button"
+                    (click)="openLimits(t)"
+                    title="Fatia da capacidade de envio reservada a este cliente"
+                  >
+                    Limites de envio
+                  </button>
+                  <div class="menu-sep"></div>
+                  <button class="menu-item" type="button" (click)="toggleActive(t)">
+                    {{ t.isActive ? 'Desativar' : 'Reativar' }}
+                  </button>
+                  <button class="menu-item danger" type="button" (click)="remove(t)">
+                    Excluir cliente
+                  </button>
+                </app-row-menu>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -126,17 +142,13 @@
       </div>
     </div>
 
-    <div class="ff">
-      <label for="tn-admin-pass">Senha do administrador *</label>
-      <input
-        id="tn-admin-pass"
-        type="password"
-        formControlName="adminPassword"
-        autocomplete="new-password"
-        [class.is-invalid]="serverErrors.has('adminPassword')"
-      />
-      <div class="field-error" *ngIf="fieldError('adminPassword')">{{ fieldError('adminPassword') }}</div>
-      <p class="hint sub">Passe-a ao cliente por um canal seguro.</p>
+    <div class="note">
+      <span class="ico" aria-hidden="true">✉️</span>
+      <div>
+        O administrador recebe um <b>email de boas-vindas</b> com um link para criar a própria senha.
+        Ninguém mais fica sabendo dela — nem você. Se o email não chegar, o link aparece aqui para você
+        repassar por outro canal.
+      </div>
     </div>
   </form>
 

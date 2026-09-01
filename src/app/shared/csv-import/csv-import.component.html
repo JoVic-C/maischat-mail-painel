@@ -1,7 +1,7 @@
 <!-- ── FASE 1: escolher o arquivo (ou colar) ── -->
 <form [formGroup]="form" *ngIf="phase === 'form'" (ngSubmit)="startValidation()">
   <p class="hint">
-    Envie o arquivo <b>.csv</b> (com cabeçalho) ou cole o conteúdo. Cada email é conferido no servidor:
+    Envie um arquivo <b>.csv</b> ou <b>.xlsx</b> (com cabeçalho) ou cole o conteúdo. Cada email é conferido no servidor:
     <b>formato</b>, <b>domínio</b>, <b>duplicados</b> e <b>já cadastrados</b>. No fim, você confere os
     números e decide importar.
   </p>
@@ -15,11 +15,11 @@
   </div>
 
   <div class="ff">
-    <label for="csv-file">Arquivo CSV</label>
+    <label for="csv-file">Arquivo CSV ou Excel</label>
     <label class="dropzone" for="csv-file" [class.filled]="!!file">
-      <input id="csv-file" type="file" accept=".csv,.txt,text/csv" (change)="onFileSelected($event)" />
+      <input id="csv-file" type="file" accept=".csv,.txt,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="onFileSelected($event)" />
       <span class="dz-icon" aria-hidden="true">📄</span>
-      <span class="dz-text" *ngIf="!file">Escolher arquivo — até 100 MB</span>
+      <span class="dz-text" *ngIf="!file">Escolher arquivo — .csv ou .xlsx, até 100 MB</span>
       <span class="dz-text" *ngIf="file">{{ file.name }}</span>
     </label>
   </div>

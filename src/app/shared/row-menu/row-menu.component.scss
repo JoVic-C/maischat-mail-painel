@@ -1,0 +1,76 @@
+:host { display: inline-block; position: relative; }
+
+/* Gatilho discreto: só ganha peso no hover/aberto. Ele não deve competir com a ação
+   principal da linha — é justamente o que estava errado antes. */
+.rm-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--g40);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.rm-trigger:hover { background: var(--nl); color: var(--n); }
+.rm-trigger:focus-visible { outline: 2px solid var(--o); outline-offset: 2px; }
+.rm-trigger.is-open { background: var(--nl); color: var(--n); border-color: var(--br); }
+
+.rm-panel {
+  position: fixed;
+  z-index: 41;
+  min-width: 176px;
+  padding: 6px;
+  background: var(--c);
+  border: 1px solid var(--br);
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(22, 38, 79, 0.16);
+  text-align: left;
+  animation: rm-in 0.13s ease-out;
+}
+
+@keyframes rm-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Itens projetados pelo pai — daí ::ng-deep: o CSS encapsulado não alcança o
+   conteúdo que veio de fora. O escopo continua preso ao .rm-panel deste componente. */
+:host ::ng-deep .rm-panel .menu-item {
+  display: block;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--t);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+:host ::ng-deep .rm-panel .menu-item:hover { background: var(--oxl); color: var(--od); }
+:host ::ng-deep .rm-panel .menu-item:focus-visible { outline: 2px solid var(--o); outline-offset: -2px; }
+
+/* Ações destrutivas: vermelhas só aqui dentro, onde já custaram um clique a mais. */
+:host ::ng-deep .rm-panel .menu-item.danger { color: var(--r); }
+:host ::ng-deep .rm-panel .menu-item.danger:hover { background: var(--rl); color: var(--r); }
+
+/* Separa o bloco destrutivo do resto — a pausa evita o clique por inércia. */
+:host ::ng-deep .rm-panel .menu-sep {
+  height: 1px;
+  margin: 5px 6px;
+  background: var(--br);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rm-panel { animation: none; }
+}

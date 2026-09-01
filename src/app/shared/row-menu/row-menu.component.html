@@ -1,0 +1,24 @@
+<button
+  #trigger
+  type="button"
+  class="rm-trigger"
+  [class.is-open]="open"
+  [attr.aria-label]="label"
+  aria-haspopup="menu"
+  [attr.aria-expanded]="open"
+  (click)="toggle()"
+>
+  <span aria-hidden="true">⋯</span>
+</button>
+
+<div
+  class="rm-panel"
+  *ngIf="open"
+  role="menu"
+  [attr.aria-label]="label"
+  [style.top.px]="top"
+  [style.right.px]="right"
+  (click)="onPanelClick($event)"
+>
+  <ng-content></ng-content>
+</div>

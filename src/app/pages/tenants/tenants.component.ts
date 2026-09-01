@@ -34,7 +34,6 @@ export class TenantsComponent implements OnInit, OnDestroy {
     name: 'Nome do cliente',
     slug: 'Identificador',
     adminEmail: 'Email do administrador',
-    adminPassword: 'Senha do administrador',
     adminName: 'Nome do administrador',
   };
 
@@ -43,7 +42,6 @@ export class TenantsComponent implements OnInit, OnDestroy {
     name: 'Informe um nome com ao menos 2 caracteres.',
     slug: '3 a 40 caracteres: letras minúsculas, números e hífen.',
     adminEmail: 'Informe um email válido.',
-    adminPassword: 'A senha deve ter ao menos 8 caracteres.',
   };
 
   /** Texto de erro do campo (servidor ou validação local). */
@@ -65,7 +63,6 @@ export class TenantsComponent implements OnInit, OnDestroy {
       slug: ['', [Validators.required, Validators.pattern(SLUG_PATTERN)]],
       adminName: [''],
       adminEmail: ['', [Validators.required, Validators.email]],
-      adminPassword: ['', [Validators.required, Validators.minLength(8)]],
     });
     this.limitsForm = this.fb.group({
       concurrency: [0, [Validators.required, Validators.min(0)]],
@@ -120,7 +117,7 @@ export class TenantsComponent implements OnInit, OnDestroy {
   openCreate(): void {
     this.formError = '';
     this.serverErrors.clear();
-    this.form.reset({ name: '', slug: '', adminName: '', adminEmail: '', adminPassword: '' });
+    this.form.reset({ name: '', slug: '', adminName: '', adminEmail: '' });
     this.modal = true;
   }
 

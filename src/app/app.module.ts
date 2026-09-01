@@ -1,5 +1,7 @@
+import { registerLocaleData } from '@angular/common';
 import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
-import { NgModule } from '@angular/core';
+import localePt from '@angular/common/locales/pt';
+import { LOCALE_ID, NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
 import { RouterModule, Routes } from '@angular/router';
@@ -8,6 +10,7 @@ import { AppComponent } from './app.component';
 
 // ─── Compartilhados ───
 import { ButtonComponent } from './shared/button/button.component';
+import { RowMenuComponent } from './shared/row-menu/row-menu.component';
 import { ConfirmComponent } from './shared/confirm/confirm.component';
 import { CsvImportComponent } from './shared/csv-import/csv-import.component';
 import { DataStateComponent } from './shared/data-state/data-state.component';
@@ -72,11 +75,16 @@ const routes: Routes = [
   { path: '**', redirectTo: 'dashboard' },
 ];
 
+// O painel é em português: sem isto os pipes number/date formatam em en-US e um
+// contador de contatos aparece como "10,000" em vez de "10.000".
+registerLocaleData(localePt);
+
 @NgModule({
   declarations: [
     AppComponent,
     // compartilhados
     ButtonComponent,
+    RowMenuComponent,
     ModalComponent,
     LogoComponent,
     NavbarComponent,
@@ -107,7 +115,10 @@ const routes: Routes = [
     AccountComponent,
   ],
   imports: [BrowserModule, HttpClientModule, FormsModule, ReactiveFormsModule, RouterModule.forRoot(routes)],
-  providers: [{ provide: HTTP_INTERCEPTORS, useClass: TokenInterceptor, multi: true }],
+  providers: [
+    { provide: HTTP_INTERCEPTORS, useClass: TokenInterceptor, multi: true },
+    { provide: LOCALE_ID, useValue: 'pt-BR' },
+  ],
   bootstrap: [AppComponent],
 })
 export class AppModule {}

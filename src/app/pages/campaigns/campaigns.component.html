@@ -76,29 +76,17 @@
 
                 <app-button variant="outline" size="sm" (click)="viewDetail(c)">detalhes</app-button>
 
-                <!-- Menu de ações secundárias -->
-                <div class="menu-wrap">
-                  <button
-                    type="button"
-                    class="btn btn-o btn-sm"
-                    (click)="toggleMenu(c._id, $event)"
-                    title="mais ações"
-                    aria-label="Mais ações"
-                    [attr.aria-expanded]="openMenuId === c._id"
-                  >
-                    ⋮
-                  </button>
-                  <div class="menu" *ngIf="openMenuId === c._id" role="menu">
-                    <button type="button" role="menuitem" *ngIf="canEdit(c)" (click)="openEdit(c); closeMenu()">
-                      ✎ Editar
-                    </button>
-                    <button type="button" role="menuitem" (click)="testSend(c); closeMenu()">✉ Enviar teste</button>
-                    <button type="button" role="menuitem" (click)="refresh(c); closeMenu()">↻ Atualizar métricas</button>
-                    <button type="button" role="menuitem" class="danger" (click)="remove(c); closeMenu()">
-                      🗑 Excluir
-                    </button>
-                  </div>
-                </div>
+                <!-- Ações secundárias no componente compartilhado. A implementação anterior
+                     posicionava o painel com `position: absolute` dentro do .tbl-wrap, que tem
+                     `overflow-x: auto` — e isso RECORTA o que transborda, então o menu aparecia
+                     cortado ao ser aberto. O app-row-menu posiciona em viewport e escapa do corte. -->
+                <app-row-menu [label]="'Ações da campanha ' + c.name">
+                  <button class="menu-item" type="button" *ngIf="canEdit(c)" (click)="openEdit(c)">Editar</button>
+                  <button class="menu-item" type="button" (click)="testSend(c)">Enviar teste</button>
+                  <button class="menu-item" type="button" (click)="refresh(c)">Atualizar métricas</button>
+                  <div class="menu-sep"></div>
+                  <button class="menu-item danger" type="button" (click)="remove(c)">Excluir campanha</button>
+                </app-row-menu>
               </div>
             </td>
           </tr>
@@ -107,9 +95,6 @@
     </div>
   </app-data-state>
 </div>
-
-<!-- Fecha o menu ao clicar fora -->
-<div class="menu-backdrop" *ngIf="openMenuId" (click)="closeMenu()"></div>
 
 <!-- Nova/editar campanha -->
 <app-modal

@@ -13,23 +13,6 @@
 }
 .link-name:hover { text-decoration: underline; }
 
-/* ── Menu de ações secundárias ── */
-.menu-wrap { position: relative; }
-.menu {
-  position: absolute; right: 0; top: calc(100% + 4px); z-index: 40;
-  background: #fff; border: 1px solid var(--br); border-radius: 10px;
-  box-shadow: 0 8px 28px rgba(20, 18, 31, 0.14); padding: 5px; min-width: 190px;
-}
-.menu button {
-  display: block; width: 100%; text-align: left; background: none; border: none;
-  padding: 9px 12px; border-radius: 7px; font-family: inherit; font-size: 13px;
-  font-weight: 600; color: var(--t); cursor: pointer;
-}
-.menu button:hover { background: var(--oxl); }
-.menu button.danger { color: var(--r); }
-.menu button.danger:hover { background: var(--rl); }
-.menu-backdrop { position: fixed; inset: 0; z-index: 30; }
-
 /* ── Detalhe do disparo ── */
 .summary { margin-bottom: 4px; }
 .summary .v.neutral { color: var(--n); }

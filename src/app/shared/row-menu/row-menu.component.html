@@ -17,7 +17,9 @@
   role="menu"
   [attr.aria-label]="label"
   [style.top.px]="top"
+  [style.bottom.px]="bottom"
   [style.right.px]="right"
+  [class.is-placed]="positioned"
   (click)="onPanelClick($event)"
 >
   <ng-content></ng-content>

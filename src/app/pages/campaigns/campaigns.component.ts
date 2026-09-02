@@ -73,8 +73,6 @@ export class CampaignsComponent implements OnInit, OnDestroy {
   scopeCampaign: Campaign | null = null;
   starting = false;
 
-  openMenuId: string | null = null;
-
   private readonly FIELD_LABELS: Record<string, string> = {
     name: 'Nome',
     templateId: 'Template',
@@ -206,17 +204,6 @@ export class CampaignsComponent implements OnInit, OnDestroy {
       },
       error: () => this.stopLiveRefresh(), // parou de responder: não insiste em silêncio
     });
-  }
-
-  // ─── Menu de ações ───
-
-  toggleMenu(id: string, ev: Event): void {
-    ev.stopPropagation();
-    this.openMenuId = this.openMenuId === id ? null : id;
-  }
-
-  closeMenu(): void {
-    this.openMenuId = null;
   }
 
   /** Só rascunho e agendada podem ser editadas — o backend recusa editar em envio. */

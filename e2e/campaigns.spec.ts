@@ -246,7 +246,7 @@ test.describe('Campanhas — detalhe do disparo', () => {
       ],
     });
 
-    await page.getByRole('button', { name: 'Newsletter Julho' }).click();
+    await page.getByRole('button', { name: 'Newsletter Julho', exact: true }).click();
 
     const detail = page.getByRole('dialog', { name: 'Newsletter Julho' });
     await expect(detail).toBeVisible();
@@ -267,7 +267,7 @@ test.describe('Campanhas — detalhe do disparo', () => {
       ],
     });
 
-    await page.getByRole('button', { name: 'Newsletter Julho' }).click();
+    await page.getByRole('button', { name: 'Newsletter Julho', exact: true }).click();
     const detail = page.getByRole('dialog', { name: 'Newsletter Julho' });
     await detail.getByLabel('Filtrar envios por situação').selectOption('bounced');
 

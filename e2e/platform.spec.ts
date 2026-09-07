@@ -62,6 +62,21 @@ test.describe('Motor de envio — acesso', () => {
     await page.goto('/dashboard');
     await expect(page.getByRole('link', { name: 'motor de envio' })).toBeHidden();
   });
+
+  test('e o superadmin alcança a tela pelo menu da plataforma', async ({ page }) => {
+    // A metade positiva importa tanto quanto a negativa: sem ela, este arquivo
+    // continuaria verde mesmo que o caminho sumisse para TODO mundo.
+    const api = new ApiMock({ user: SUPERADMIN });
+    await api.install(page);
+    await seedSuperadmin(page);
+
+    await page.goto('/dashboard');
+    await page.getByRole('button', { name: 'plataforma' }).click();
+    await page.getByRole('menu').getByRole('link', { name: 'Motor de envio' }).click();
+
+    await expect(page).toHaveURL(/\/plataforma$/);
+    await expect(page.getByRole('heading', { name: 'Motor de envio' })).toBeVisible();
+  });
 });
 
 test.describe('Motor de envio — edição', () => {

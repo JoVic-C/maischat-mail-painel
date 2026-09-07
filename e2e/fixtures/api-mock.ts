@@ -1,12 +1,12 @@
 import type { Page, Route } from '@playwright/test';
 import type {
-  ActivityPoint,
   AuthUser,
   Campaign,
   CampaignStatus,
   DashboardStats,
   List,
   PlatformSettings,
+  RelatorioEnvios,
   SendLog,
   SendStatus,
   Segment,
@@ -168,6 +168,8 @@ export interface MockSeed {
   smtps?: SmtpServer[];
   logs?: SendLog[];
   tenants?: TenantSummary[];
+  contacts?: { _id: string; email: string; name?: string }[];
+  importStates?: Record<string, unknown>[];
 }
 
 /**
@@ -187,6 +189,14 @@ export class ApiMock {
   tenants: TenantSummary[];
   platformSettings: PlatformSettings;
 
+  /**
+   * Fila de respostas do job de importação, consumida a cada consulta de progresso.
+   * A tela pergunta em intervalo curto; devolver uma sequência é o que permite testar
+   * a transição validando → validado → importando → concluído sem cronômetro no teste.
+   */
+  importStates: Record<string, unknown>[] = [];
+  contacts: { _id: string; email: string; name?: string }[] = [];
+
   /** Falhas forçadas, por apelido de rota (ex.: 'login', 'campaigns', 'saveCampaign'). */
   readonly failures = new Map<string, ApiFailure>();
 
@@ -202,6 +212,8 @@ export class ApiMock {
     this.smtps = seed.smtps ?? [];
     this.logs = seed.logs ?? [];
     this.tenants = seed.tenants ?? [];
+    this.contacts = seed.contacts ?? [];
+    this.importStates = seed.importStates ?? [];
     this.platformSettings = seed.platformSettings ?? { ...DEFAULT_PLATFORM_SETTINGS };
   }
 
@@ -266,13 +278,43 @@ export class ApiMock {
       return this.json(route, this.user);
     }
 
+    // ─── Contatos e importação em massa ───
+    if (method === 'GET' && path === '/contacts') {
+      if (await this.rejectIfFailing(route, 'contacts')) return;
+      return this.json(route, { contacts: this.contacts, total: this.contacts.length, page: 1, limit: 50 });
+    }
+    if (method === 'GET' && path === '/contacts/import/open') {
+      return this.json(route, []);
+    }
+    if (method === 'POST' && path === '/contacts/import') {
+      if (await this.rejectIfFailing(route, 'startImport')) return;
+      return this.json(route, { message: 'Arquivo recebido. Validando...', id: 'job-1', status: 'uploaded' }, 202);
+    }
+    if (method === 'GET' && path.startsWith('/contacts/import/')) {
+      // Consome a fila; o último estado se repete, para a tela poder consultar de novo.
+      const proximo = this.importStates.length > 1 ? this.importStates.shift() : this.importStates[0];
+      return this.json(route, proximo ?? {});
+    }
+    if (method === 'POST' && path.endsWith('/confirm')) {
+      if (await this.rejectIfFailing(route, 'confirmImport')) return;
+      return this.json(route, { message: 'Importação iniciada.', id: 'job-1', status: 'importing' }, 202);
+    }
+
     // ─── Dashboard ───
     if (method === 'GET' && path === '/dashboard/stats') {
       if (await this.rejectIfFailing(route, 'dashboardStats')) return;
       return this.json(route, this.dashboardStats());
     }
-    if (method === 'GET' && path === '/dashboard/activity') {
-      return this.json(route, [] as ActivityPoint[]);
+    if (method === 'GET' && path === '/dashboard/sends') {
+      // Recorte vazio: as telas cobertas aqui não dependem do gráfico, só de ele não quebrar.
+      return this.json(route, {
+        de: new Date().toISOString(),
+        ate: new Date().toISOString(),
+        agrupamento: 'day',
+        totais: { registros: 0, enviados: 0, abertos: 0, clicados: 0, falhas: 0, bounces: 0, descadastros: 0 },
+        taxas: { abertura: 0, clique: 0, falha: 0 },
+        serie: [],
+      } satisfies RelatorioEnvios);
     }
 
     // ─── Apoios do formulário ───

@@ -6,7 +6,6 @@ dist/
 *.log
 
 # Playwright
-playwright.config.ts
 /test-results/
 /playwright-report/
 /blob-report/

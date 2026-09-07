@@ -434,12 +434,33 @@ export interface DashboardStats {
   recentCampaigns: Campaign[];
 }
 
-export interface ActivityPoint {
-  date: string;
-  sent: number;
-  opened: number;
-  clicked: number;
-  failed: number;
+/** Como os envios são agrupados no relatório do dashboard. */
+export type Agrupamento = 'day' | 'week' | 'month';
+
+export interface TotaisEnvio {
+  /** Linhas de envio no período — inclui as que ainda não saíram. */
+  registros: number;
+  enviados: number;
+  abertos: number;
+  clicados: number;
+  falhas: number;
+  bounces: number;
+  descadastros: number;
+}
+
+export interface PontoEnvio extends TotaisEnvio {
+  /** Início do balde, em ISO. O rótulo é montado na tela. */
+  inicio: string;
+}
+
+/** Relatório de envios da conta num período — alimenta o gráfico e os totais. */
+export interface RelatorioEnvios {
+  de: string;
+  ate: string;
+  agrupamento: Agrupamento;
+  totais: TotaisEnvio;
+  taxas: { abertura: number; clique: number; falha: number };
+  serie: PontoEnvio[];
 }
 
 // ─── Respostas genéricas ───

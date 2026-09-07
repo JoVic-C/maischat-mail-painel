@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { List, SaveListInput } from '../../models';
 import { ApiService } from '../../services/api.service';
+import { baixarBlob } from '../../shared/download';
 import { apiErrorMessage, ServerErrorsHandler } from '../../shared/server-errors/server-errors';
 import { ToastService } from '../../shared/toast/toast.service';
 
@@ -159,6 +160,29 @@ export class ListsComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.resyncing = false;
+        this.toast.apiError(err);
+      },
+    });
+  }
+
+  /** Lista sendo exportada — o botão daquela linha mostra o carregamento. */
+  exportandoId: string | null = null;
+
+  /**
+   * Baixa os contatos da lista em CSV.
+   *
+   * Usa a exportação de contatos filtrando por esta lista: é o mesmo endpoint da tela
+   * de Contatos, então as duas telas não podem divergir no que entregam.
+   */
+  exportar(list: List): void {
+    this.exportandoId = list._id;
+    this.api.exportContacts({ listId: list._id }).subscribe({
+      next: (blob) => {
+        this.exportandoId = null;
+        baixarBlob(blob, `contatos-${list.name}.csv`);
+      },
+      error: (err) => {
+        this.exportandoId = null;
         this.toast.apiError(err);
       },
     });

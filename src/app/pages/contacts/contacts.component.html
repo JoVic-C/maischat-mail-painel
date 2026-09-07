@@ -2,6 +2,7 @@
   <app-page-title [subtitle]="total + ' contato(s) · busca por nome, email ou empresa'">Contatos</app-page-title>
 
   <div class="head-actions">
+    <app-button variant="outline" [loading]="exportando" (click)="exportar()">Exportar CSV</app-button>
     <app-button variant="outline" (click)="openImport()">Importar contatos</app-button>
     <app-button variant="primary" (click)="openCreate()">+ Novo contato</app-button>
   </div>

@@ -1,12 +1,13 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '@env/environment';
 import {
-  ActivityPoint,
+  Agrupamento,
   ApiMessage,
   Campaign,
   ContactPage,
+  RelatorioEnvios,
   ContactQuery,
   CreateTenantInput,
   CreateTenantResult,
@@ -62,8 +63,14 @@ export class ApiService {
   dashboardStats(): Observable<DashboardStats> {
     return this.http.get<DashboardStats>(`${this.api}/dashboard/stats`);
   }
-  dashboardActivity(): Observable<ActivityPoint[]> {
-    return this.http.get<ActivityPoint[]>(`${this.api}/dashboard/activity`);
+  /**
+   * Relatório de envios da conta no período, com totais e série para o gráfico.
+   * Sem parâmetros, o servidor devolve os últimos 30 dias agrupados por dia.
+   */
+  dashboardSends(de?: string, ate?: string, agrupamento?: Agrupamento): Observable<RelatorioEnvios> {
+    return this.http.get<RelatorioEnvios>(`${this.api}/dashboard/sends`, {
+      params: this.params({ de, ate, agrupamento }),
+    });
   }
 
   // ─── Listas ───
@@ -93,6 +100,22 @@ export class ApiService {
       }),
     });
   }
+  /**
+   * Exporta contatos em CSV, com os mesmos filtros da listagem.
+   * O servidor transmite o arquivo direto do banco — nada é montado aqui.
+   */
+  exportContacts(query: ContactQuery = {}): Observable<Blob> {
+    return this.http.get(`${this.api}/contacts/export`, {
+      params: this.params({
+        search: query.search,
+        listId: query.listId,
+        status: query.status,
+        delivery: query.delivery,
+      }),
+      responseType: 'blob',
+    });
+  }
+
   saveContact(data: SaveContactInput): Observable<ApiMessage> {
     return this.http.post<ApiMessage>(`${this.api}/contacts/save`, data);
   }
@@ -201,6 +224,22 @@ export class ApiService {
   }
 
   /** Envios da campanha. O corpo é o array; a paginação vem nos headers X-*. */
+  /** Relatório de envios em CSV. O backend transmite o arquivo direto do banco. */
+  /**
+   * Relatório de envios. Sai em .xlsx; o servidor cai para CSV sozinho quando a
+   * campanha passa do limite de linhas de uma planilha.
+   *
+   * Observa a resposta inteira porque o nome do arquivo — e a extensão certa — vem no
+   * cabeçalho: quem decide o formato é o servidor, não a tela.
+   */
+  campaignReport(id: string, status = ''): Observable<HttpResponse<Blob>> {
+    return this.http.get(`${this.api}/campaigns/${id}/report`, {
+      params: this.params({ status }),
+      responseType: 'blob',
+      observe: 'response',
+    });
+  }
+
   campaignLogs(id: string, page = 1, limit = 50, status = ''): Observable<SendLogPage> {
     return this.http
       .get<SendLogPage['logs']>(`${this.api}/campaigns/${id}/logs`, {

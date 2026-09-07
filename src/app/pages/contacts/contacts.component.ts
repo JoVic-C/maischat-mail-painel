@@ -1,8 +1,9 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Contact, ContactStatus, DeliveryFilter, List, SaveContactInput } from '../../models';
+import { Contact, ContactQuery, ContactStatus, DeliveryFilter, List, SaveContactInput } from '../../models';
 import { ApiService } from '../../services/api.service';
 import { ConfirmService } from '../../shared/confirm/confirm.service';
+import { baixarBlob } from '../../shared/download';
 import { apiErrorMessage, ServerErrorsHandler } from '../../shared/server-errors/server-errors';
 import { ToastService } from '../../shared/toast/toast.service';
 
@@ -102,18 +103,24 @@ export class ContactsComponent implements OnInit, OnDestroy {
       : 'Nenhum contato ainda. Importe um CSV ou cadastre o primeiro!';
   }
 
+  /**
+   * O recorte que o usuário está vendo. Usado pela listagem E pela exportação — se
+   * cada uma montasse o seu, o arquivo exportado poderia não bater com a tela.
+   */
+  private filtrosAtuais(): ContactQuery {
+    return {
+      search: this.search,
+      listId: this.listFilter,
+      status: this.statusFilter,
+      delivery: this.deliveryFilter,
+    };
+  }
+
   load(): void {
     this.loading = true;
     this.error = null;
     this.api
-      .getContacts({
-        search: this.search,
-        listId: this.listFilter,
-        status: this.statusFilter,
-        delivery: this.deliveryFilter,
-        page: this.page,
-        limit: this.limit,
-      })
+      .getContacts({ ...this.filtrosAtuais(), page: this.page, limit: this.limit })
       .subscribe({
         next: (res) => {
           this.contacts = res.contacts;
@@ -235,6 +242,26 @@ export class ContactsComponent implements OnInit, OnDestroy {
 
   closeImport(): void {
     this.importModal = false;
+  }
+
+  exportando = false;
+
+  /**
+   * Exporta o que está na tela — com busca e filtros aplicados, não a base inteira.
+   * É o mesmo recorte que o usuário está vendo, que é o que ele espera receber.
+   */
+  exportar(): void {
+    this.exportando = true;
+    this.api.exportContacts(this.filtrosAtuais()).subscribe({
+      next: (blob) => {
+        this.exportando = false;
+        baixarBlob(blob, 'contatos.csv');
+      },
+      error: (err) => {
+        this.exportando = false;
+        this.toast.apiError(err);
+      },
+    });
   }
 
   onImported(): void {

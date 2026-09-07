@@ -14,6 +14,7 @@ import {
   Template,
 } from '../../models';
 import { ApiService } from '../../services/api.service';
+import { baixarBlob } from '../../shared/download';
 import { AuthService } from '../../services/auth.service';
 import { ConfirmService } from '../../shared/confirm/confirm.service';
 import { PromptService } from '../../shared/prompt/prompt.service';
@@ -203,6 +204,22 @@ export class CampaignsComponent implements OnInit, OnDestroy {
         }
       },
       error: () => this.stopLiveRefresh(), // parou de responder: não insiste em silêncio
+    });
+  }
+
+  /**
+   * Baixa o relatório de envios da campanha.
+   *
+   * O arquivo vem transmitido do servidor (uma linha por destinatário), então aqui só
+   * entregamos o blob ao navegador — nada é montado nem acumulado na tela.
+   */
+  baixarRelatorio(c: Campaign): void {
+    this.api.campaignReport(c._id).subscribe({
+      next: (res) => {
+        // O nome vem do cabeçalho: é o servidor que sabe se saiu .xlsx ou .csv.
+        baixarBlob(res.body as Blob, 'envios.xlsx', res.headers.get('Content-Disposition'));
+      },
+      error: (err) => this.toast.apiError(err),
     });
   }
 

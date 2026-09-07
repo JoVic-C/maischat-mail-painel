@@ -45,6 +45,16 @@
             <td class="muted">{{ l.tags.length ? l.tags.join(', ') : '—' }}</td>
             <td class="ta-right row-actions">
               <app-button variant="outline" size="sm" (click)="openEdit(l)">editar</app-button>
+              <app-button
+                variant="outline"
+                size="sm"
+                [disabled]="!l.contactCount"
+                [loading]="exportandoId === l._id"
+                [title]="l.contactCount ? 'Baixar os contatos desta lista em CSV' : 'Lista vazia'"
+                (click)="exportar(l)"
+              >
+                exportar
+              </app-button>
               <app-button variant="danger" size="sm" (click)="askDelete(l)">excluir</app-button>
             </td>
           </tr>

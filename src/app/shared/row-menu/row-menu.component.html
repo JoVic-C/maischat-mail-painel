@@ -3,12 +3,21 @@
   type="button"
   class="rm-trigger"
   [class.is-open]="open"
-  [attr.aria-label]="label"
+  [class.has-text]="triggerText"
+  [class.is-nav]="tone === 'nav'"
+  [class.is-active]="active"
+  [attr.aria-label]="triggerText ? null : label"
   aria-haspopup="menu"
   [attr.aria-expanded]="open"
   (click)="toggle()"
 >
-  <span aria-hidden="true">⋯</span>
+  <ng-container *ngIf="triggerText; else pontos">
+    <!-- O texto vai num elemento próprio para poder ser cortado com reticências sem
+         levar a seta junto; um nome longo transbordava sobre os vizinhos. -->
+    <span class="rm-texto">{{ triggerText }}</span>
+    <span class="rm-seta" aria-hidden="true"></span>
+  </ng-container>
+  <ng-template #pontos><span aria-hidden="true">⋯</span></ng-template>
 </button>
 
 <div

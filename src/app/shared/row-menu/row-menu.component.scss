@@ -22,6 +22,40 @@
 .rm-trigger:focus-visible { outline: 2px solid var(--o); outline-offset: 2px; }
 .rm-trigger.is-open { background: var(--nl); color: var(--n); border-color: var(--br); }
 
+/* Gatilho com texto: deixa de ser um quadrado de 30px e vira um item de menu. */
+.rm-trigger.has-text {
+  width: auto;
+  height: auto;
+  gap: 5px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.rm-seta {
+  width: 0;
+  height: 0;
+  border: 4px solid transparent;
+  border-top-color: currentColor;
+  /* Meio pixel para baixo: a seta desenhada por bordas fica opticamente alta. */
+  margin-top: 2px;
+  transition: transform 0.15s ease;
+}
+.rm-trigger.is-open .rm-seta { transform: rotate(180deg); margin-top: -2px; }
+
+/* Na barra escura o gatilho acompanha os links vizinhos, não o fundo claro da tabela. */
+.rm-trigger.is-nav {
+  color: rgba(255, 255, 255, 0.65);
+  text-transform: lowercase;
+  border-radius: 7px;
+}
+.rm-trigger.is-nav:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.rm-trigger.is-nav.is-open { background: rgba(255, 255, 255, 0.14); color: #fff; border-color: transparent; }
+/* Ativo = a tela aberta está dentro deste menu. Mesmo destaque dos links, senão o
+   usuário perde de vista onde está assim que a seção entra num agrupamento. */
+.rm-trigger.is-nav.is-active { background: var(--o); color: #fff; }
+.rm-trigger.is-nav.is-active:hover { background: var(--o); color: #fff; }
+
 .rm-panel {
   position: fixed;
   z-index: 41;
@@ -62,8 +96,13 @@
   font-weight: 600;
   text-align: left;
   cursor: pointer;
+  /* O item também é usado como <a> (navegação), não só como <button>. */
+  text-decoration: none;
   transition: background 0.12s ease, color 0.12s ease;
 }
+/* Rota aberta dentro do menu: o item fica marcado, para o menu fechado e o aberto
+   contarem a mesma história sobre onde o usuário está. */
+:host ::ng-deep .rm-panel .menu-item.active { background: var(--oxl); color: var(--od); }
 :host ::ng-deep .rm-panel .menu-item:hover { background: var(--oxl); color: var(--od); }
 :host ::ng-deep .rm-panel .menu-item:focus-visible { outline: 2px solid var(--o); outline-offset: -2px; }
 
@@ -81,3 +120,7 @@
 @media (prefers-reduced-motion: reduce) {
   .rm-panel { animation: none; }
 }
+
+/* Texto do gatilho: corta com reticências e mantém a seta sempre visível. */
+.rm-texto { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rm-seta { flex: 0 0 auto; }

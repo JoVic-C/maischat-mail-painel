@@ -1,35 +1,70 @@
-/* sticky em vez de fixed: a barra cresce no mobile sem sobrepor o conteúdo. */
+/* sticky em vez de fixed: a barra não sobrepõe o conteúdo, e o painel recolhido
+   consegue se ancorar nela. */
 :host { display: block; position: sticky; top: 0; z-index: 100; }
 
-/* Grid de 3 colunas em vez de space-between: as laterais dividem o espaço que sobra
-   igualmente, então o menu fica no centro REAL da tela — não onde a marca e o bloco
-   do usuário deixaram sobrar. */
+/* O menu fica no centro da TELA, não no centro do espaço que sobra.
+   Antes eram três colunas de grid e o menu se centralizava na do meio — que não é
+   simétrica: o bloco do usuário mede 364px contra 61px da marca, e isso empurrava o
+   menu 152px para a esquerda, metade da diferença.
+   A simetria vem de `flex: 1 1 0` nas duas laterais: elas partem da mesma base e
+   recebem larguras iguais, então o miolo cai exatamente no meio. */
 .navbar {
+  position: relative;
+  /* Acima do fundo escuro do painel, que vem depois no DOM. */
+  z-index: 1;
   height: 72px;
   background: var(--nd);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
   align-items: center;
   padding: 0 26px;
   gap: 16px;
 }
 
-/* min-width: 0 nas laterais — sem isso o conteúdo impõe a largura da coluna e o
-   menu do meio sai do centro quando o nome do cliente é longo. */
-.nav-brand { display: flex; align-items: center; text-decoration: none; color: #fff; min-width: 0; }
+/* Sem `min-width: 0` de propósito: o mínimo destes blocos é o próprio conteúdo. É o
+   que faz a barra TRANSBORDAR quando aperta, em vez de um bloco entrar por baixo do
+   outro — e é o transbordo que o componente mede para recolher a barra. */
+.nav-brand { flex: 1 1 0; display: flex; align-items: center; text-decoration: none; color: #fff; }
 .nav-brand:hover { opacity: 0.9; }
 
-.nav-links { display: flex; gap: 4px; justify-content: center; }
-.nav-links a {
+.nav-links {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.nav-links > a {
+  flex: 0 0 auto;
+  white-space: nowrap;
   color: rgba(255, 255, 255, 0.65); font-size: 13.5px; font-weight: 600;
   text-transform: lowercase; text-decoration: none; padding: 8px 14px;
-  border-radius: 7px; transition: all 0.18s;
+  border-radius: 7px; transition: background 0.18s ease, color 0.18s ease;
 }
-.nav-links a:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
-.nav-links a.active { background: var(--o); color: #fff; }
+.nav-links > a:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.nav-links > a.active { background: var(--o); color: #fff; }
+.nav-links > a:focus-visible { outline: 2px solid var(--om); outline-offset: 2px; }
 
-.nav-user { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
+/* Separa visualmente os agrupamentos dos links diretos: são outro nível de navegação,
+   não mais um item da mesma lista. */
+.nav-links app-row-menu { margin-left: 8px; position: relative; }
+.nav-links app-row-menu::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.14);
+}
+/* Entre dois agrupamentos seguidos o divisor seria ruído: eles já são o mesmo nível. */
+.nav-links app-row-menu + app-row-menu { margin-left: 2px; }
+.nav-links app-row-menu + app-row-menu::before { display: none; }
+
+.nav-user { flex: 1 1 0; display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+
+/* O chip do cliente é o item mais largo da barra; o teto impede que um nome fora do
+   comum empurre o menu do centro. Passando dele, o nome inteiro continua no title. */
 .nav-user .tenant {
   display: inline-flex; align-items: center; gap: 6px;
   color: var(--om); font-size: 12px; font-weight: 700;
@@ -41,13 +76,16 @@
 .nav-user .t-label {
   font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
   color: rgba(255, 138, 82, 0.75);
+  /* Sem isto o rótulo quebra em duas linhas quando a barra aperta, e o chip fica com
+     o dobro da altura das outras coisas. Melhor a barra recolher do que isso. */
+  white-space: nowrap;
 }
-
-/* Saber EM QUAL cliente se está operando é a informação que evita agir na base errada,
-   então o nome aparece inteiro — os 150px anteriores cortavam até nomes curtos.
-   O teto largo existe só para um nome fora do comum não empurrar o menu do centro;
-   passando dele, o nome inteiro continua no title. */
-.nav-user .t-name { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* O piso existe para o nome não virar "Cli…": saber EM QUAL cliente se está operando
+   é justamente o que evita agir na base errada. */
+.nav-user .t-name {
+  min-width: 84px; max-width: 280px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 
 .nav-user .t-exit {
   border: 0; background: rgba(255, 255, 255, 0.12); color: var(--om);
@@ -56,30 +94,114 @@
   font-family: inherit; transition: background 0.15s, color 0.15s;
 }
 .nav-user .t-exit:hover { background: var(--o); color: #fff; }
-.nav-user .user {
-  color: rgba(255, 255, 255, 0.85); font-size: 13px; font-weight: 600;
-  text-decoration: none; padding: 6px 10px; border-radius: 7px;
-}
-.nav-user .user:hover,
-.nav-user .user.active { background: rgba(255, 255, 255, 0.1); color: #fff; }
-.nav-user .logout {
-  background: rgba(255, 255, 255, 0.1); color: #fff; border: none; padding: 6px 14px;
-  border-radius: 7px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit;
-}
-.nav-user .logout:hover { background: rgba(255, 255, 255, 0.2); }
+.nav-user .t-exit:focus-visible { outline: 2px solid var(--om); outline-offset: 2px; }
 
-@media (max-width: 1080px) {
-  /* Em telas estreitas o menu desce para uma linha própria e rola na horizontal. */
-  .navbar {
-    grid-template-columns: auto 1fr;
-    grid-template-areas: 'brand user' 'links links';
-    height: auto;
-    padding: 10px 16px;
-    gap: 8px;
-  }
-  .nav-brand { grid-area: brand; }
-  .nav-user { grid-area: user; }
-  .nav-links { grid-area: links; width: 100%; overflow-x: auto; justify-content: flex-start; }
-  /* No mobile a barra é estreita: aí sim corta, mas com folga e com o nome inteiro no title. */
-  .nav-user .t-name { max-width: 38vw; overflow: hidden; text-overflow: ellipsis; }
+/* O gatilho do menu da conta é um nome próprio: caixa baixa forçada o descaracteriza. */
+.nav-user ::ng-deep .rm-trigger.is-nav {
+  text-transform: none;
+  max-width: 200px;
 }
+.nav-user ::ng-deep .rm-trigger.is-nav > * { min-width: 0; }
+
+/* ─── Tela estreita ─── */
+
+.nav-burger {
+  display: grid;
+  gap: 4px;
+  width: 38px;
+  padding: 9px 8px;
+  border: 0;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+.nav-burger span {
+  display: block;
+  height: 2px;
+  border-radius: 2px;
+  background: #fff;
+  transition: transform 0.18s ease, opacity 0.14s ease;
+}
+.nav-burger:hover { background: rgba(255, 255, 255, 0.16); }
+.nav-burger:focus-visible { outline: 2px solid var(--om); outline-offset: 2px; }
+/* Aberto, os três traços viram um X — o mesmo botão que abriu também fecha. */
+.nav-burger.is-open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.nav-burger.is-open span:nth-child(2) { opacity: 0; }
+.nav-burger.is-open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+.navbar.compacta {
+  height: 64px;
+  padding: 0 14px;
+  gap: 12px;
+}
+/* Sem menu no meio, a marca não precisa mais equilibrar nada: encosta no botão e o
+   bloco do usuário fica com o resto. */
+.navbar.compacta .nav-brand { flex: 0 0 auto; }
+.navbar.compacta .nav-user { gap: 8px; }
+.navbar.compacta .nav-user .t-label { display: none; }
+.navbar.compacta .nav-user .t-name { max-width: 30vw; }
+
+.nav-painel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  background: var(--nd);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.3);
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  animation: np-in 0.16s ease-out;
+}
+.nav-painel > a {
+  padding: 11px 12px;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: lowercase;
+  text-decoration: none;
+}
+.nav-painel > a:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.nav-painel > a.active { background: var(--o); color: #fff; }
+.nav-painel > a:focus-visible { outline: 2px solid var(--om); outline-offset: -2px; }
+
+/* Título de seção: é o que traz, para a tela estreita, a mesma separação de escopo que
+   os agrupamentos fazem na barra larga. */
+.np-secao {
+  margin: 10px 12px 4px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.nav-fundo {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 14, 30, 0.5);
+  animation: np-in 0.16s ease-out;
+}
+
+@keyframes np-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-painel,
+  .nav-fundo { animation: none; }
+  .nav-burger span { transition: none; }
+}
+
+/* Na barra compacta o chip do cliente e o menu da conta dividem uma coluna estreita:
+   ambos precisam poder encolher, senão transbordam por cima da marca. */
+.navbar.compacta .nav-user > * { min-width: 0; }
+.navbar.compacta .nav-user .tenant { flex: 0 1 auto; overflow: hidden; }
+.navbar.compacta .nav-user .t-name { max-width: none; }
+.navbar.compacta .nav-user ::ng-deep .rm-trigger.is-nav { max-width: 120px; padding: 8px 8px; }

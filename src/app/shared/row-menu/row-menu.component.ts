@@ -34,6 +34,22 @@ export class RowMenuComponent implements OnDestroy {
   /** Rótulo acessível do gatilho — diga de QUEM são as ações, não só "ações". */
   @Input() label = 'Mais ações';
 
+  /**
+   * Texto visível do gatilho. Vazio mantém o "⋯" da linha de tabela; preenchido troca
+   * por um item de menu com seta, para os agrupamentos da barra de navegação.
+   */
+  @Input() triggerText = '';
+
+  /**
+   * Onde o gatilho vive. `row` é a linha de tabela (fundo claro); `nav` é a barra
+   * escura, onde o botão precisa acompanhar os links ao redor. Só o GATILHO muda — o
+   * painel abre sobre a página e continua claro nos dois casos.
+   */
+  @Input() tone: 'row' | 'nav' = 'row';
+
+  /** Gatilho em estado ativo: a rota aberta está dentro deste menu. */
+  @Input() active = false;
+
   open = false;
   /**
    * Coordenadas do painel, em viewport (position: fixed).

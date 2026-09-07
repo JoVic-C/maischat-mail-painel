@@ -48,41 +48,115 @@
   </div>
 </div>
 
-<div class="grid cols-2">
-  <div class="card">
-    <h3 style="font-size:15px;font-weight:800;color:var(--n);margin-bottom:6px">Atividade (30 dias)</h3>
+<div class="card" style="margin-bottom:20px">
+  <div class="rel-head">
+    <h3 class="rel-titulo">Relatório de envios</h3>
 
-    <div class="act-metrics">
-      <span><b style="color:var(--o)">{{ totals.sent }}</b> enviados</span>
-      <span><b style="color:var(--gn)">{{ totals.opened }}</b> aberturas</span>
-      <span><b style="color:var(--od)">{{ totals.clicked }}</b> cliques</span>
-      <span><b style="color:var(--r)">{{ totals.failed }}</b> falhas</span>
+    <!-- Atalhos de período. Cada um já escolhe o agrupamento que cabe na janela:
+         um ano por dia daria 365 barras ilegíveis. -->
+    <div class="periodos" role="group" aria-label="Período do relatório">
+      <button
+        type="button"
+        class="periodo"
+        *ngFor="let p of presets"
+        [class.ativo]="presetAtivo === p.id"
+        [attr.aria-pressed]="presetAtivo === p.id"
+        (click)="aplicarPreset(p.id)"
+      >
+        {{ p.rotulo }}
+      </button>
     </div>
+  </div>
 
-    <app-data-state
-      [loading]="loadingActivity"
-      [error]="activityError"
-      [empty]="!activity.length"
-      emptyText="Sem atividade ainda. Dispare uma campanha!"
-      [skeletonRows]="4"
-      [skeletonCols]="6"
-      (retry)="loadActivity()"
-    >
-      <div class="chart">
-        <div class="col" *ngFor="let a of activity">
-          <div class="col-bar" [style.height.%]="barHeight(a.sent)"></div>
-          <div class="col-tip">
-            <span class="tip-date">{{ a.date.slice(8, 10) }}/{{ a.date.slice(5, 7) }}</span>
-            <span><b style="color:#FFB185">{{ a.sent }}</b> enviados</span>
-            <span><b style="color:#6ee7b7">{{ a.opened }}</b> aberturas</span>
-            <span><b style="color:#fca5a5">{{ a.clicked }}</b> cliques</span>
+  <!-- Período livre: as datas e o agrupamento saem do atalho quando mexidos na mão. -->
+  <div class="periodo-livre">
+    <label for="rel-de">De</label>
+    <input id="rel-de" type="date" [(ngModel)]="de" (change)="aplicarPeriodo()" />
+    <label for="rel-ate">até</label>
+    <input id="rel-ate" type="date" [(ngModel)]="ate" (change)="aplicarPeriodo()" />
+    <label for="rel-agrup">agrupado por</label>
+    <select id="rel-agrup" [(ngModel)]="agrupamento" (change)="aplicarPeriodo()">
+      <option value="day">dia</option>
+      <option value="week">semana</option>
+      <option value="month">mês</option>
+    </select>
+  </div>
+
+  <app-data-state
+    [loading]="loadingEnvios"
+    [error]="enviosError"
+    [empty]="!!relatorio && !relatorio.serie.length"
+    emptyText="Nenhum envio neste período."
+    [skeletonRows]="4"
+    [skeletonCols]="6"
+    (retry)="carregarEnvios()"
+  >
+    <ng-container *ngIf="relatorio">
+      <!-- Totais do período. Grid de largura fixa para não deixar um número órfão
+           numa segunda linha quando a janela aperta. -->
+      <div class="rel-totais">
+        <div class="rel-total">
+          <b style="color:var(--o)">{{ relatorio.totais.enviados | number }}</b>
+          <span>enviados</span>
+        </div>
+        <div class="rel-total">
+          <b style="color:var(--gn)">{{ relatorio.totais.abertos | number }}</b>
+          <span>aberturas <i>{{ relatorio.taxas.abertura }}%</i></span>
+        </div>
+        <div class="rel-total">
+          <b style="color:var(--od)">{{ relatorio.totais.clicados | number }}</b>
+          <span>cliques <i>{{ relatorio.taxas.clique }}%</i></span>
+        </div>
+        <div class="rel-total">
+          <b style="color:var(--r)">{{ relatorio.totais.falhas | number }}</b>
+          <span>{{ relatorio.totais.falhas === 1 ? 'falha' : 'falhas' }}</span>
+        </div>
+        <div class="rel-total">
+          <b style="color:var(--wd)">{{ relatorio.totais.bounces | number }}</b>
+          <span>{{ relatorio.totais.bounces === 1 ? 'bounce' : 'bounces' }}</span>
+        </div>
+        <div class="rel-total">
+          <b style="color:var(--g50)">{{ relatorio.totais.descadastros | number }}</b>
+          <span>{{ relatorio.totais.descadastros === 1 ? 'descadastro' : 'descadastros' }}</span>
+        </div>
+      </div>
+
+      <!-- Gráfico. A escala vertical fica explícita: sem o eixo, uma barra alta não
+           diz se são 10 ou 10 mil emails. -->
+      <div class="chart-wrap">
+        <div class="chart-y" aria-hidden="true">
+          <span *ngFor="let m of marcasEixoY">{{ m | number }}</span>
+        </div>
+        <div class="chart-area">
+          <div class="chart-grade" aria-hidden="true">
+            <span *ngFor="let m of marcasEixoY"></span>
+          </div>
+          <div class="chart">
+            <div class="col" *ngFor="let p of relatorio.serie">
+              <div class="col-bar" [style.height.%]="alturaBarra(p.enviados)"></div>
+              <div class="col-tip">
+                <span class="tip-date">{{ rotulo(p) }}</span>
+                <span><b style="color:#FFB185">{{ p.enviados | number }}</b> enviados</span>
+                <span><b style="color:#6ee7b7">{{ p.abertos | number }}</b> aberturas</span>
+                <span><b style="color:#fca5a5">{{ p.clicados | number }}</b> cliques</span>
+                <span *ngIf="p.falhas"><b style="color:#fca5a5">{{ p.falhas | number }}</b> falhas</span>
+              </div>
+            </div>
+          </div>
+          <!-- Eixo X rareado: com 90 baldes, uma data por barra vira borrão. -->
+          <div class="chart-x">
+            <span class="col-x" *ngFor="let p of relatorio.serie; let i = index">
+              {{ mostraRotulo(i) ? rotulo(p) : '' }}
+            </span>
           </div>
         </div>
       </div>
-      <p class="muted" style="margin-top:10px">Barras = emails enviados por dia · passe o mouse para ver o detalhe</p>
-    </app-data-state>
-  </div>
-
+      <p class="muted rel-legenda">
+        Barras = emails enviados {{ descricaoAgrupamento }} · passe o mouse para ver o detalhe
+      </p>
+    </ng-container>
+  </app-data-state>
+</div>
   <div class="card">
     <h3 style="font-size:15px;font-weight:800;color:var(--n);margin-bottom:14px">Campanhas recentes</h3>
 
@@ -131,4 +205,3 @@
       </div>
     </app-data-state>
   </div>
-</div>

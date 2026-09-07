@@ -1,14 +1,12 @@
-.act-metrics { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 12px; font-size: 12px; color: var(--g50); }
-.act-metrics b { font-size: 15px; }
 
 .camp-row { cursor: pointer; }
 .camp-row:hover td { background: var(--oxl); }
 
 /* Gráfico de barras com tooltip customizado */
-.chart { display: flex; align-items: flex-end; gap: 4px; height: 130px; padding-top: 6px; }
-.col { flex: 1; height: 100%; display: flex; align-items: flex-end; position: relative; }
+.chart { display: flex; align-items: flex-end; justify-content: center; gap: 4px; height: 180px; position: relative; }
+.col { flex: 1; max-width: 72px; height: 100%; display: flex; align-items: flex-end; position: relative; }
 .col-bar {
-  width: 100%; min-height: 4px; border-radius: 5px 5px 0 0;
+  width: 100%; border-radius: 5px 5px 0 0;
   background: linear-gradient(180deg, var(--om), var(--o));
   transition: filter 0.15s, transform 0.15s;
 }
@@ -30,3 +28,121 @@
 .col:hover .col-tip { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
 .tip-date { font-weight: 800; color: #a78bfa; margin-bottom: 3px; letter-spacing: 0.3px; }
 .col-tip b { font-size: 13px; }
+
+/* ─── Relatório de envios ─── */
+
+.rel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.rel-titulo { font-size: 15px; font-weight: 800; color: var(--n); }
+
+/* Atalhos de período: um grupo só, com o ativo em destaque. */
+.periodos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.periodo {
+  border: 1px solid var(--br);
+  background: var(--c);
+  color: var(--t2);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.periodo:hover { border-color: var(--o); color: var(--n); }
+.periodo:focus-visible { outline: 2px solid var(--o); outline-offset: 2px; }
+.periodo.ativo { background: var(--o); border-color: var(--o); color: #fff; }
+
+/* Período livre. Some no mobile? Não: quebra em duas linhas e continua utilizável. */
+.periodo-livre {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--g40);
+}
+.periodo-livre input,
+.periodo-livre select { width: auto; }
+.periodo-livre input,
+.periodo-livre select {
+  font: inherit;
+  font-size: 12.5px;
+  padding: 4px 8px;
+  border: 1px solid var(--br);
+  border-radius: 7px;
+  background: var(--c);
+  color: var(--t);
+}
+.periodo-livre input:focus-visible,
+.periodo-livre select:focus-visible { outline: 2px solid var(--o); outline-offset: 1px; }
+
+/* Totais do período. Grid de colunas iguais: com spans soltos, o último número
+   caía sozinho numa segunda linha assim que a janela apertava. */
+.rel-totais {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.rel-total {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--br);
+  border-radius: 10px;
+  background: var(--c);
+}
+.rel-total b { font-size: 19px; font-weight: 800; line-height: 1.1; }
+.rel-total span { font-size: 11.5px; color: var(--g50); }
+.rel-total i { font-style: normal; color: var(--g40); }
+
+/* ─── Eixos do gráfico ───
+   Sem escala, uma barra alta não diz se são 10 ou 10 mil emails. */
+.chart-wrap { display: flex; gap: 10px; }
+.chart-y {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: space-between;
+  height: 180px;
+  font-size: 10.5px;
+  color: var(--g40);
+  text-align: right;
+  /* alinha cada número com sua linha de grade, não com o topo do texto */
+  margin: -6px 0;
+  padding-top: 6px;
+}
+.chart-area { flex: 1; min-width: 0; position: relative; }
+.chart-grade {
+  position: absolute;
+  inset: 0 0 22px 0;
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.chart-grade span { display: block; border-top: 1px dashed var(--br); }
+.chart-x {
+  justify-content: center;
+  display: flex;
+  gap: 4px;
+  height: 22px;
+  align-items: center;
+  font-size: 10.5px;
+  color: var(--g40);
+}
+.col-x { flex: 1; max-width: 72px; min-width: 0; text-align: center; white-space: nowrap; }
+.rel-legenda { margin-top: 12px; }
+
+/* No mobile os totais viram duas colunas e o eixo Y sai — a barra e o toque bastam. */
+@media (max-width: 720px) {
+  .rel-totais { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chart-y { display: none; }
+  .rel-head { flex-direction: column; align-items: flex-start; }
+}
+
+/* O rótulo é centrado na coluna; nas pontas isso jogaria metade da data para fora
+   do cartão. Os extremos encostam na borda de dentro. */
+.col-x:first-child { text-align: left; }
+.col-x:last-child { text-align: right; }

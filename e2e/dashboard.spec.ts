@@ -149,6 +149,29 @@ test.describe('Relatório de envios — leitura do gráfico', () => {
     await expect(page.locator('.chart .col')).toHaveCount(0);
   });
 
+  test('servidor sem a rota explica a versão, sem devolver a URL na tela', async ({ page }) => {
+    // O painel implantado à frente da API já mostrou ao usuário
+    // "Rota não encontrada: GET /api/dashboard/sends?de=...&ate=...&agrupamento=day".
+    const api = new ApiMock({ user: ADMIN });
+    await api.install(page);
+    await seedSession(page, ADMIN);
+
+    await page.route('**/api/dashboard/sends*', (route) =>
+      route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Recurso não encontrado.', code: 'ROTA_INEXISTENTE' }),
+      })
+    );
+
+    await page.goto('/dashboard');
+
+    const aviso = page.locator('.state-error, app-data-state').first();
+    await expect(aviso).toContainText(/versão anterior à do painel/i);
+    await expect(aviso).not.toContainText('/api/');
+    await expect(aviso).not.toContainText('GET');
+  });
+
   test('falha ao carregar oferece tentar de novo', async ({ page }) => {
     const api = new ApiMock({ user: ADMIN });
     await api.install(page);

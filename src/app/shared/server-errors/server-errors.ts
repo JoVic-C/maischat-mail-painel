@@ -15,7 +15,16 @@ export function apiErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
     // Sem resposta do servidor: rede fora, API no ar? (status 0)
     if (err.status === 0) return 'Sem conexão com o servidor. Verifique se a API está no ar.';
-    const body = err.error as { error?: string; errors?: ServerFieldError[] } | null;
+
+    const body = err.error as { error?: string; code?: string; errors?: ServerFieldError[] } | null;
+
+    // Rota que o servidor não conhece: o painel está numa versão à frente da API.
+    // Repetir o "Recurso não encontrado." do backend deixaria o usuário sem saber o
+    // que fazer; o problema é de implantação, não do que ele clicou.
+    if (body?.code === 'ROTA_INEXISTENTE') {
+      return 'Esta função ainda não existe no servidor. Ele parece estar numa versão anterior à do painel.';
+    }
+
     return body?.errors?.[0]?.message || body?.errors?.[0]?.msg || body?.error || `Erro ${err.status}.`;
   }
 

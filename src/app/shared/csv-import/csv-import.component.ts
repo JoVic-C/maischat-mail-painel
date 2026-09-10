@@ -5,8 +5,14 @@ import { ImportCounters, ImportJob, ImportSampleRow, List } from '../../models';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../toast/toast.service';
 
-/** De quanto em quanto tempo o progresso do job é consultado. */
-const POLL_MS = 1200;
+/** Primeiro intervalo entre consultas de progresso — o início precisa responder rápido. */
+const POLL_INICIAL_MS = 1200;
+
+/** Teto do intervalo: uma importação longa não precisa ser consultada a cada segundo. */
+const POLL_MAX_MS = 10_000;
+
+/** Quanto o intervalo cresce a cada consulta sem desfecho. */
+const POLL_FATOR = 1.6;
 
 function emptyCounters(): ImportCounters {
   return { rows: 0, new: 0, addToList: 0, inList: 0, already: 0, invalid: 0 };
@@ -69,6 +75,9 @@ export class CsvImportComponent implements OnInit, OnDestroy {
   validatedListId = '';
 
   private poll?: Subscription;
+  /** Falso assim que o job termina — impede reagendar sobre um acompanhamento encerrado. */
+  private pollAtivo = false;
+  private intervaloPoll = POLL_INICIAL_MS;
 
   constructor(
     private api: ApiService,
@@ -86,7 +95,7 @@ export class CsvImportComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     // Só para de acompanhar — o job continua no servidor, e é assim que ele
     // sobrevive a fechar o modal ou recarregar a página.
-    this.poll?.unsubscribe();
+    this.stopPolling();
   }
 
   get importListId(): string {
@@ -254,10 +263,36 @@ export class CsvImportComponent implements OnInit, OnDestroy {
 
   private startPolling(): void {
     this.stopPolling();
-    this.poll = timer(0, POLL_MS)
+    this.pollAtivo = true;
+    // Cada fase (validar, importar) recomeça rápido: é quando o usuário está olhando.
+    this.intervaloPoll = POLL_INICIAL_MS;
+    this.consultarProgresso(0);
+  }
+
+  /**
+   * Consulta o progresso e reagenda a próxima com intervalo crescente.
+   *
+   * Em intervalo fixo de 1,2s eram 50 requisições por minuto: uma importação de dez
+   * minutos gastava umas 500, e a cota geral da API — 200 por 15 minutos, contada por
+   * IP — acabava no meio do caminho. A tela levava 429 e parava de acompanhar,
+   * enquanto o worker terminava a importação normalmente no servidor.
+   *
+   * Crescendo até 10s, a mesma importação faz cerca de 60 consultas.
+   */
+  private consultarProgresso(atraso: number): void {
+    this.poll = timer(atraso)
       .pipe(switchMap(() => this.api.getImport(this.jobId)))
       .subscribe({
-        next: (job) => this.applyJob(job),
+        next: (job) => {
+          this.applyJob(job);
+          // applyJob encerra o acompanhamento quando o job chega ao fim.
+          if (!this.pollAtivo) return;
+          // Agenda com o intervalo atual e só então cresce: crescer antes faria a
+          // primeira espera ser 1,9s em vez do 1,2s prometido pela constante.
+          const proxima = this.intervaloPoll;
+          this.intervaloPoll = Math.min(this.intervaloPoll * POLL_FATOR, POLL_MAX_MS);
+          this.consultarProgresso(proxima);
+        },
         error: (err) => {
           this.stopPolling();
           this.toast.apiError(err);
@@ -266,6 +301,7 @@ export class CsvImportComponent implements OnInit, OnDestroy {
   }
 
   private stopPolling(): void {
+    this.pollAtivo = false;
     this.poll?.unsubscribe();
     this.poll = undefined;
   }

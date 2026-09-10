@@ -132,3 +132,44 @@ test.describe('Importação de contatos — conferência antes de gravar', () =>
     expect(api.callsTo('/confirm')).toHaveLength(1);
   });
 });
+
+test.describe('Importação de contatos — custo do acompanhamento', () => {
+  test('as consultas de progresso vão espaçando enquanto o job não termina', async ({ page }) => {
+    // Em intervalo fixo de 1,2s eram 50 requisições por minuto, e a cota geral da API
+    // (200 por 15 min, por IP) acabava em ~4 minutos de importação: a tela levava 429
+    // e parava de acompanhar, enquanto o worker seguia trabalhando no servidor.
+    const momentos: number[] = [];
+    const api = new ApiMock({
+      // Sempre "validando": o acompanhamento não termina, que é o caso caro.
+      importStates: [{ id: 'job-1', status: 'validating', counters: contadores({ rows: 10 }) }],
+    });
+    await api.install(page);
+    await seedSession(page);
+
+    await page.route('**/api/contacts/import/job-1', async (route) => {
+      momentos.push(Date.now());
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 'job-1', status: 'validating', counters: contadores({ rows: 10 }) }),
+      });
+    });
+
+    await page.goto('/contacts');
+    await page.getByRole('button', { name: 'Importar contatos' }).click();
+    await page.locator('textarea').fill(CSV);
+    await page.getByRole('button', { name: 'Validar' }).click();
+
+    // Espera o bastante para ver o intervalo crescer algumas vezes.
+    await page.waitForTimeout(9000);
+
+    expect(momentos.length).toBeGreaterThanOrEqual(4);
+
+    const intervalos = momentos.slice(1).map((t, i) => t - momentos[i]);
+    // O último intervalo tem que ser visivelmente maior que o primeiro.
+    expect(intervalos[intervalos.length - 1]).toBeGreaterThan(intervalos[0] * 1.5);
+
+    // Em intervalo fixo de 1,2s seriam ~8 consultas nesses 9 segundos.
+    expect(momentos.length).toBeLessThan(8);
+  });
+});

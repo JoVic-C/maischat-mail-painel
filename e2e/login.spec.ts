@@ -51,7 +51,6 @@ test.describe('Login', () => {
 
     await expect(page.getByText('Email ou senha inválidos.')).toBeVisible();
     await expect(page).toHaveURL(/\/login$/);
-    // Falhou: não pode ter gravado sessão nenhuma.
     expect(await page.evaluate(() => localStorage.getItem('mmail_token'))).toBeNull();
   });
 

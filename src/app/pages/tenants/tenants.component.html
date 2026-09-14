@@ -37,8 +37,7 @@
         </thead>
         <tbody>
           <tr *ngFor="let t of tenants" [class.row-active]="t.id === auth.activeTenantId">
-            <!-- Nome e identificador na mesma célula: o slug é atributo do cliente, não
-                 um dado que se compare entre linhas — como coluna, só roubava largura. -->
+            <!-- Slug na mesma célula do nome: não é dado que se compare entre linhas. -->
             <td>
               <div class="cli">
                 <span class="cli-name">{{ t.name }}</span>
@@ -62,9 +61,7 @@
                   operar
                 </app-button>
 
-                <!-- O resto atrás do menu: uma linha com cinco botões de mesmo peso
-                     quebrava em duas fileiras e deixava 'excluir' como o elemento mais
-                     forte da tela — justamente a ação mais rara e irreversível. -->
+                <!-- Ações secundárias no menu: botões de mesmo peso destacavam 'excluir', a mais irreversível. -->
                 <app-row-menu [label]="'Ações de ' + t.name">
                   <button class="menu-item" type="button" (click)="rename(t)">
                     Renomear
@@ -199,9 +196,7 @@
   </ng-container>
 </app-modal>
 
-<!-- Link de acesso do cliente recém-criado. Fica disponível para o superadmin repassar
-     por outro canal quando o email de boas-vindas não sai (plataforma sem SMTP, caixa
-     recusando, domínio novo em quarentena). -->
+<!-- Link de acesso para repassar por outro canal quando o email de boas-vindas não sai. -->
 <app-modal *ngIf="welcome" title="Acesso do novo cliente" (close)="welcome = null">
   <p class="inv-intro">
     Email de boas-vindas enviado para <strong>{{ welcomeFor }}</strong

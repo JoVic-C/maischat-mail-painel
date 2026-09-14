@@ -1,6 +1,5 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 
-/** Paginação simples (anterior/próxima) para listagens paginadas pelo backend. */
 @Component({
     selector: 'app-paginator',
     template: `

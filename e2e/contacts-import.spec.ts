@@ -1,16 +1,8 @@
 import { expect, type Page, test } from '@playwright/test';
 import { ApiMock, type MockSeed, seedSession } from './fixtures/api-mock';
 
-/**
- * Importação de contatos — o fluxo mais novo do painel e o de maior risco: o operador
- * sobe a base inteira de um cliente e decide, olhando os números, se grava.
- *
- * O alvo aqui é a interface: que o arquivo suba como multipart (e não como JSON, que
- * era o teto do desenho anterior), que o progresso apareça, e que a gravação só
- * aconteça na confirmação explícita.
- */
+/** Importação de contatos: upload multipart, progresso e gravação só na confirmação explícita. */
 
-/** Contadores no formato que o backend devolve. */
 function contadores(over: Partial<Record<string, number>> = {}) {
   return { rows: 0, new: 0, addToList: 0, inList: 0, already: 0, invalid: 0, ...over };
 }
@@ -41,16 +33,14 @@ test.describe('Importação de contatos — envio do arquivo', () => {
   });
 
   test('o conteúdo colado sobe como ARQUIVO, não dentro de um JSON', async ({ page }) => {
-    // É o que removeu o teto de tamanho: um corpo JSON com o CSV inteiro estourava o
-    // limite do proxy muito antes do limite do produto.
+    // Corpo JSON com o CSV inteiro estourava o limite do proxy.
     const api = await abrirImportacao(page, {
       importStates: [{ id: 'job-1', status: 'validated', counters: contadores({ rows: 2, new: 2 }), sample: [], listIds: [] }],
     });
 
     await page.getByLabel('Ou cole o conteúdo').fill(CSV);
 
-    // Espera a requisição em si, em vez de consultar o dublê num laço com prazo: o
-    // que se quer afirmar é o formato do envio, e ele está no cabeçalho.
+    // Espera a requisição em si: o formato do envio está no cabeçalho.
     const [requisicao] = await Promise.all([
       page.waitForRequest((r) => r.method() === 'POST' && r.url().includes('/contacts/import')),
       page.getByRole('button', { name: 'Validar' }).click(),
@@ -125,8 +115,7 @@ test.describe('Importação de contatos — conferência antes de gravar', () =>
     await page.getByRole('button', { name: 'Validar' }).click();
     await page.getByRole('button', { name: /Importar 3 contato/ }).click();
 
-    // Ao concluir, a tela de contatos fecha o modal e recarrega a lista — o resultado
-    // chega pelo aviso, não por uma etapa final dentro do modal.
+    // Ao concluir, o resultado chega pelo aviso, não por uma etapa dentro do modal.
     await expect(page.getByText('3 contato(s) importado(s).')).toBeVisible();
     await expect(page.getByRole('dialog')).toBeHidden();
     expect(api.callsTo('/confirm')).toHaveLength(1);
@@ -135,9 +124,7 @@ test.describe('Importação de contatos — conferência antes de gravar', () =>
 
 test.describe('Importação de contatos — custo do acompanhamento', () => {
   test('as consultas de progresso vão espaçando enquanto o job não termina', async ({ page }) => {
-    // Em intervalo fixo de 1,2s eram 50 requisições por minuto, e a cota geral da API
-    // (200 por 15 min, por IP) acabava em ~4 minutos de importação: a tela levava 429
-    // e parava de acompanhar, enquanto o worker seguia trabalhando no servidor.
+    // Intervalo fixo esgotava a cota da API (200/15 min por IP) e a tela levava 429.
     const momentos: number[] = [];
     const api = new ApiMock({
       // Sempre "validando": o acompanhamento não termina, que é o caso caro.
@@ -160,13 +147,11 @@ test.describe('Importação de contatos — custo do acompanhamento', () => {
     await page.locator('textarea').fill(CSV);
     await page.getByRole('button', { name: 'Validar' }).click();
 
-    // Espera o bastante para ver o intervalo crescer algumas vezes.
     await page.waitForTimeout(9000);
 
     expect(momentos.length).toBeGreaterThanOrEqual(4);
 
     const intervalos = momentos.slice(1).map((t, i) => t - momentos[i]);
-    // O último intervalo tem que ser visivelmente maior que o primeiro.
     expect(intervalos[intervalos.length - 1]).toBeGreaterThan(intervalos[0] * 1.5);
 
     // Em intervalo fixo de 1,2s seriam ~8 consultas nesses 9 segundos.

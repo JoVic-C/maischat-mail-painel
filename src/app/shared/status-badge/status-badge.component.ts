@@ -13,12 +13,6 @@ import {
 
 export type BadgeKind = 'campaign' | 'contact' | 'send' | 'listType' | 'role' | 'active' | 'match' | 'csvRow';
 
-/**
- * Badge de status. Rótulo, cor e tooltip vêm de `models/labels.ts` — nenhuma tela
- * repete mapa de status.
- *
- * `<app-status-badge kind="campaign" [value]="c.status"></app-status-badge>`
- */
 @Component({
     selector: 'app-status-badge',
     templateUrl: './status-badge.component.html',
@@ -28,7 +22,6 @@ export type BadgeKind = 'campaign' | 'contact' | 'send' | 'listType' | 'role' | 
 export class StatusBadgeComponent {
   @Input() kind: BadgeKind = 'campaign';
   @Input() value = '';
-  /** Sobrescreve o texto do tooltip vindo do mapa. */
   @Input() hint?: string;
 
   private readonly maps: Record<BadgeKind, Record<string, BadgeInfo>> = {

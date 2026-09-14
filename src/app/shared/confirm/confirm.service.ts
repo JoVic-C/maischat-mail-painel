@@ -5,13 +5,9 @@ export interface ConfirmOptions {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  danger?: boolean; // botão de confirmar em vermelho (ações destrutivas)
+  danger?: boolean;
 }
 
-/**
- * Confirmação estilizada reutilizável (substitui o confirm() nativo do navegador).
- * Uso: this.confirm.ask({ message: '...' }).then(ok => { if (ok) {...} });
- */
 @Injectable({ providedIn: 'root' })
 export class ConfirmService {
   state: Required<ConfirmOptions> | null = null;

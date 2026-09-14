@@ -21,7 +21,6 @@ export class SegmentsComponent implements OnInit, OnDestroy {
     name: 'Informe um nome com ao menos 2 caracteres.',
   };
 
-  /** Texto de erro do campo (servidor ou validação local). */
   fieldError(field: string): string {
     return this.serverErrors.messageFor(field, this.LOCAL_ERRORS);
   }
@@ -98,7 +97,6 @@ export class SegmentsComponent implements OnInit, OnDestroy {
     return SEGMENT_FIELD_LABELS[field] ?? field;
   }
 
-  /** Resumo textual das regras, mostrado na coluna da tabela. */
   ruleSummary(segment: Segment): string {
     if (!segment.rules.length) return '—';
     return segment.rules

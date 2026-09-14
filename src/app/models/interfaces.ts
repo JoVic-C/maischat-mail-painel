@@ -1,11 +1,4 @@
-/**
- * Contratos da API do mMail.
- *
- * Espelham os models/serviços do backend. Datas chegam como string ISO (JSON),
- * e os ObjectId como string — por isso nada de Date/ObjectId aqui.
- */
-
-// ─── Autenticação / plataforma ───
+/** Datas chegam como string ISO e ObjectId como string (JSON): nada de Date/ObjectId aqui. */
 
 export type UserRole = 'superadmin' | 'admin' | 'user';
 
@@ -23,7 +16,6 @@ export interface LoginResult {
   user: AuthUser;
 }
 
-/** Usuário administrado na tela de equipe (o backend nunca devolve a senha). */
 export interface ManagedUser {
   id: string;
   email: string;
@@ -49,7 +41,6 @@ export interface ResetLink {
   emailSent?: boolean;
 }
 
-/** Dados públicos do convite, para a tela de definir senha se apresentar. */
 export interface InvitePreview {
   email: string;
   name: string;
@@ -65,8 +56,7 @@ export interface SaveUserInput {
   isActive?: boolean;
 }
 
-/** Cliente da plataforma, com os contadores que a tela de superadmin mostra. */
-/** Fatia da capacidade do motor reservada a um cliente. 0 = sem limite próprio. */
+/** 0 = sem limite próprio. */
 export interface SendingLimits {
   concurrency: number;
   ratePerMinute: number;
@@ -90,7 +80,6 @@ export interface UpdateTenantInput {
   sendingLimits?: Partial<SendingLimits>;
 }
 
-/** Link de acesso gerado quando o cliente é criado (boas-vindas ao admin dele). */
 export interface TenantWelcome {
   url: string;
   expiresAt: string;
@@ -111,22 +100,15 @@ export interface CreateTenantInput {
   name: string;
   slug: string;
   adminEmail: string;
-  /**
-   * Opcional e NÃO usada pelo painel: o admin define a própria senha pelo link do
-   * email de boas-vindas. Continua na API para scripts e provisionamento automatizado.
-   */
+  /** Não usada pelo painel; existe para scripts e provisionamento automatizado. */
   adminPassword?: string;
   adminName?: string;
 }
 
-/**
- * Ajustes do motor de envio. Valem para a plataforma inteira — não para um cliente —,
- * por isso só o superadmin lê e escreve.
- */
+/** Vale para a plataforma inteira, por isso só o superadmin lê e escreve. */
 export interface PlatformSettings {
   /** Envios simultâneos do worker; recurso compartilhado por todos os clientes. */
   workerConcurrency: number;
-  /** Teto de emails por minuto na fila inteira. */
   ratePerMinute: number;
   updatedByEmail: string;
   updatedAt: string | null;
@@ -141,8 +123,6 @@ export interface SavePlatformSettingsInput {
   workerConcurrency: number;
   ratePerMinute: number;
 }
-
-// ─── Listas ───
 
 export type ListType = 'public' | 'private';
 
@@ -164,8 +144,6 @@ export interface SaveListInput {
   type?: ListType;
   tags?: string[];
 }
-
-// ─── Contatos ───
 
 export type ContactStatus = 'active' | 'unsubscribed' | 'bounced';
 export type DeliveryFilter = '' | 'delivered' | 'never' | 'undeliverable';
@@ -214,10 +192,8 @@ export interface ContactQuery {
 
 export type RowKind = 'new' | 'add-to-list' | 'in-list' | 'already' | 'invalid';
 
-/** Situação de uma importação de contatos em massa. */
 export type ImportStatus = 'uploaded' | 'validating' | 'validated' | 'importing' | 'done' | 'failed' | 'canceled';
 
-/** Contadores agregados da importação — substituem o antigo evento por linha. */
 export interface ImportCounters {
   rows: number;
   new: number;
@@ -227,14 +203,12 @@ export interface ImportCounters {
   invalid: number;
 }
 
-/** Amostra das primeiras linhas, para dar rosto ao progresso. */
 export interface ImportSampleRow {
   email: string;
   kind: RowKind;
   reason?: string;
 }
 
-/** Estado completo de uma importação, consultado enquanto o job roda no servidor. */
 export interface ImportJob {
   id: string;
   status: ImportStatus;
@@ -249,15 +223,13 @@ export interface ImportJob {
   createdAt: string;
 }
 
-/** Resumo de uma importação ainda aberta (usado para retomar após recarregar a página). */
+/** Importação ainda aberta, para retomar após recarregar a página. */
 export interface OpenImport {
   id: string;
   status: ImportStatus;
   originalName: string;
   createdAt: string;
 }
-
-// ─── Templates ───
 
 export interface Template {
   _id: string;
@@ -275,8 +247,6 @@ export interface SaveTemplateInput {
   subject: string;
   html: string;
 }
-
-// ─── Segmentos ───
 
 export type SegmentOperator = 'equals' | 'contains';
 
@@ -301,8 +271,6 @@ export interface SaveSegmentInput {
   rules: SegmentRule[];
   matchAll: boolean;
 }
-
-// ─── Campanhas ───
 
 export type CampaignStatus = 'draft' | 'scheduled' | 'queued' | 'sending' | 'paused' | 'completed' | 'failed';
 
@@ -335,6 +303,8 @@ export interface Campaign {
   smtpId: string | null;
   segmentId: string | null;
   status: CampaignStatus;
+  /** Por que a campanha parou sozinha; nulo quando foi pausada pelo usuário. */
+  pauseReason?: string | null;
   stats: CampaignStats;
   linkStats: LinkStat[];
   attachments: CampaignAttachment[];
@@ -381,7 +351,37 @@ export interface SendLogPage {
   limit: number;
 }
 
-// ─── SMTP ───
+export type DnsCheck = 'spf' | 'dkim' | 'dmarc';
+export type DnsCheckState = 'pass' | 'fail' | 'error';
+
+export interface SendingDomainCheck {
+  state: DnsCheckState;
+  detail: string;
+}
+
+export interface DnsRecordHint {
+  check: DnsCheck;
+  type: 'TXT' | 'CNAME';
+  host: string;
+  value: string | null;
+  note: string;
+}
+
+export interface SendingDomain {
+  domain: string;
+  smtpNames: string[];
+  status: 'verified' | 'unverified';
+  checks: Record<DnsCheck, SendingDomainCheck> | null;
+  checkedAt: string | null;
+  verifiedAt: string | null;
+  records: DnsRecordHint[];
+}
+
+export interface SendingDomainsOverview {
+  enforced: boolean;
+  platformHosts: string[];
+  domains: SendingDomain[];
+}
 
 export interface SmtpServer {
   id: string;
@@ -421,8 +421,6 @@ export interface SmtpCredentials {
   password: string;
 }
 
-// ─── Dashboard ───
-
 export interface DashboardStats {
   totalContacts: number;
   activeContacts: number;
@@ -434,7 +432,6 @@ export interface DashboardStats {
   recentCampaigns: Campaign[];
 }
 
-/** Como os envios são agrupados no relatório do dashboard. */
 export type Agrupamento = 'day' | 'week' | 'month';
 
 export interface TotaisEnvio {
@@ -453,7 +450,6 @@ export interface PontoEnvio extends TotaisEnvio {
   inicio: string;
 }
 
-/** Relatório de envios da conta num período — alimenta o gráfico e os totais. */
 export interface RelatorioEnvios {
   de: string;
   ate: string;
@@ -463,8 +459,6 @@ export interface RelatorioEnvios {
   serie: PontoEnvio[];
 }
 
-// ─── Respostas genéricas ───
-
 export interface ApiMessage {
   message: string;
 }
@@ -473,14 +467,11 @@ export interface UploadedImage {
   url: string;
 }
 
-// ─── Operação da plataforma (superadmin) ───
-
 export interface QueueState {
   waiting: number;
   active: number;
   delayed: number;
   failed: number;
-  /** Campanhas com disparo agendado para o futuro. */
   scheduled: number;
 }
 

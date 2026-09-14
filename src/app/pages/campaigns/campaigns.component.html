@@ -37,6 +37,8 @@
             <td>
               <app-status-badge kind="campaign" [value]="c.status"></app-status-badge>
               <div class="muted when" *ngIf="c.status === 'scheduled' && c.scheduledAt">🕑 {{ fmt(c.scheduledAt) }}</div>
+              <!-- Pausa feita pelo sistema: diz o porquê, senão "pausada" parece ação de alguém do time. -->
+              <div class="pause-reason" *ngIf="c.status === 'paused' && c.pauseReason">⚠ {{ c.pauseReason }}</div>
             </td>
             <td class="progress-cell">
               {{ c.stats.sent }}/{{ c.stats.total }}
@@ -57,7 +59,6 @@
             </td>
             <td>
               <div class="actions">
-                <!-- Ação principal, conforme o status -->
                 <app-button *ngIf="c.status === 'draft'" variant="success" size="sm" (click)="start(c)">
                   ▶ disparar
                 </app-button>
@@ -76,10 +77,7 @@
 
                 <app-button variant="outline" size="sm" (click)="viewDetail(c)">detalhes</app-button>
 
-                <!-- Ações secundárias no componente compartilhado. A implementação anterior
-                     posicionava o painel com `position: absolute` dentro do .tbl-wrap, que tem
-                     `overflow-x: auto` — e isso RECORTA o que transborda, então o menu aparecia
-                     cortado ao ser aberto. O app-row-menu posiciona em viewport e escapa do corte. -->
+                <!-- app-row-menu posiciona em viewport: o overflow-x do .tbl-wrap cortaria o painel. -->
                 <app-row-menu [label]="'Ações da campanha ' + c.name">
                   <button class="menu-item" type="button" *ngIf="canEdit(c)" (click)="openEdit(c)">Editar</button>
                   <button class="menu-item" type="button" (click)="testSend(c)">Enviar teste</button>
@@ -96,8 +94,6 @@
     </div>
   </app-data-state>
 </div>
-
-<!-- Nova/editar campanha -->
 <app-modal
   *ngIf="modal"
   [title]="editingId ? 'Editar campanha' : 'Nova campanha'"
@@ -133,11 +129,17 @@
 
     <div class="ff">
       <label for="cp-lists">Listas de destinatários *</label>
-      <select id="cp-lists" multiple formControlName="listIds" class="multi" [class.is-invalid]="serverErrors.has('listIds')">
-        <option *ngFor="let l of lists" [value]="l._id">{{ l.name }} ({{ l.contactCount }})</option>
-      </select>
+      <app-multi-select
+        inputId="cp-lists"
+        formControlName="listIds"
+        [options]="listOptions"
+        placeholder="Selecione as listas"
+        searchPlaceholder="Buscar lista"
+        emptyText="Nenhuma lista encontrada."
+        ariaLabel="Listas de destinatários"
+        [invalid]="serverErrors.has('listIds') || (form.controls['listIds'].touched && form.controls['listIds'].invalid)"
+      ></app-multi-select>
       <div class="field-error" *ngIf="fieldError('listIds')">{{ fieldError('listIds') }}</div>
-      <p class="hint sub">Segure Ctrl para selecionar várias</p>
     </div>
 
     <div class="ff" *ngIf="isAdmin">
@@ -184,8 +186,6 @@
     </app-button>
   </ng-container>
 </app-modal>
-
-<!-- Agendamento -->
 <app-modal *ngIf="scheduleModal" title="Agendar disparo" size="sm" [busy]="scheduling" (close)="scheduleModal = false">
   <p class="hint">Campanha "{{ scheduleCampaignRef?.name }}" — escolha data e hora futuras.</p>
   <div class="ff">
@@ -198,8 +198,6 @@
     <app-button variant="primary" [loading]="scheduling" (click)="confirmSchedule()">Agendar</app-button>
   </ng-container>
 </app-modal>
-
-<!-- Escopo do disparo -->
 <app-modal
   *ngIf="scopeModal"
   [title]="'Disparar &quot;' + scopeCampaign?.name + '&quot;'"
@@ -225,15 +223,14 @@
     <app-button variant="outline" (click)="scopeModal = false">Cancelar</app-button>
   </ng-container>
 </app-modal>
-
-<!-- Detalhe do disparo -->
 <app-modal *ngIf="detailModal" [title]="detailCampaign?.name || 'Campanha'" size="xl" (close)="closeDetail()">
   <p class="muted">
     Resultado do disparo ·
     <app-status-badge kind="campaign" [value]="detailCampaign?.status || ''"></app-status-badge>
   </p>
-
-  <!-- Resumo -->
+  <div class="pause-reason banner" *ngIf="detailCampaign?.status === 'paused' && detailCampaign?.pauseReason" role="alert">
+    ⚠ {{ detailCampaign?.pauseReason }}
+  </div>
   <div class="grid cols-4 summary">
     <div class="stat">
       <div class="v neutral">

@@ -51,7 +51,6 @@ export class SmtpComponent implements OnInit, OnDestroy {
     fromEmail: 'Informe um email de remetente válido.',
   };
 
-  /** Texto de erro do campo (servidor ou validação local). */
   fieldError(field: string): string {
     return this.serverErrors.messageFor(field, this.LOCAL_ERRORS);
   }
@@ -126,7 +125,6 @@ export class SmtpComponent implements OnInit, OnDestroy {
       dailyLimit: 0,
       hourlyLimit: 0,
     });
-    // Na criação a senha é obrigatória; na edição, opcional (vazio = manter a atual).
     this.form.controls['password'].setValidators([Validators.required]);
     this.form.controls['password'].updateValueAndValidity();
     this.modal = true;

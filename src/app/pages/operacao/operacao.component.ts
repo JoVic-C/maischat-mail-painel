@@ -4,16 +4,11 @@ import { ApiService } from '../../services/api.service';
 import { apiErrorMessage } from '../../shared/server-errors/server-errors';
 import { ToastService } from '../../shared/toast/toast.service';
 
-/** De quanto em quanto tempo a visão se atualiza sozinha. */
 const REFRESH_MS = 15_000;
 
 /**
- * Operação da plataforma — a única tela que enxerga através dos clientes.
- *
- * A parte de cima (fila e números por cliente) não tem dado pessoal e atualiza
- * sozinha. A lista de falhas mostra endereços de destinatários, que pertencem aos
- * CLIENTES: por isso ela não carrega junto, exige um clique consciente e cada
- * consulta fica registrada em auditoria no servidor.
+ * A lista de falhas expõe endereços de destinatários dos clientes: só carrega sob
+ * clique e cada consulta é auditada no servidor.
  */
 @Component({
   selector: 'app-operacao',
@@ -26,7 +21,7 @@ export class OperacaoComponent implements OnInit, OnDestroy {
   loading = false;
   error: string | null = null;
 
-  /** Janela das métricas por cliente, em horas. */
+  /** Em horas. */
   hours = 24;
   autoRefresh = true;
 
@@ -53,7 +48,6 @@ export class OperacaoComponent implements OnInit, OnDestroy {
   private startTimer(): void {
     this.stopTimer();
     if (!this.autoRefresh) return;
-    // `silent`: a atualização automática não pisca a tela nem mostra esqueleto.
     this.timer = setInterval(() => this.load(true), REFRESH_MS);
   }
 
@@ -91,7 +85,6 @@ export class OperacaoComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Carrega as falhas detalhadas — cada chamada é auditada no servidor. */
   loadFailures(): void {
     this.loadingFailures = true;
     this.api.platformFailures(50).subscribe({
@@ -107,7 +100,6 @@ export class OperacaoComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Total de erros do período — usado para destacar clientes com problema. */
   errorsOf(row: { failed: number; bounced: number }): number {
     return row.failed + row.bounced;
   }

@@ -42,7 +42,6 @@ export class ListsComponent implements OnInit, OnDestroy {
     name: 'Informe um nome com ao menos 2 caracteres.',
   };
 
-  /** Texto de erro do campo (servidor ou validação local). */
   fieldError(field: string): string {
     return this.serverErrors.messageFor(field, this.LOCAL_ERRORS);
   }
@@ -110,7 +109,6 @@ export class ListsComponent implements OnInit, OnDestroy {
     this.editingId = null;
   }
 
-  /** Cria (e avança para o import) ou salva a edição. */
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -144,7 +142,6 @@ export class ListsComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Passo 2 concluído (importou ou pulou) → fecha e atualiza contadores. */
   finishWizard(): void {
     this.closeWizard();
     this.load();
@@ -165,15 +162,9 @@ export class ListsComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Lista sendo exportada — o botão daquela linha mostra o carregamento. */
   exportandoId: string | null = null;
 
-  /**
-   * Baixa os contatos da lista em CSV.
-   *
-   * Usa a exportação de contatos filtrando por esta lista: é o mesmo endpoint da tela
-   * de Contatos, então as duas telas não podem divergir no que entregam.
-   */
+  /** Mesmo endpoint da tela de Contatos, para as duas não divergirem. */
   exportar(list: List): void {
     this.exportandoId = list._id;
     this.api.exportContacts({ listId: list._id }).subscribe({

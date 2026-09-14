@@ -3,20 +3,6 @@ import { Component, EventEmitter, HostBinding, Input, Output } from '@angular/co
 export type ModalSize = 'sm' | 'md' | 'lg' | 'xl';
 export type ModalVariant = 'default' | 'warning' | 'danger';
 
-/**
- * Wrapper de modal reutilizável.
- *
- * ```html
- * <app-modal *ngIf="show" title="Excluir lista" variant="danger"
- *            [busy]="saving" (close)="close()">
- *   <p>Conteúdo do corpo</p>
- *   <ng-container modal-actions>
- *     <app-button variant="outline" (click)="close()">Cancelar</app-button>
- *     <app-button variant="danger" [loading]="saving" (click)="confirm()">Excluir</app-button>
- *   </ng-container>
- * </app-modal>
- * ```
- */
 @Component({
     selector: 'app-modal',
     templateUrl: './modal.component.html',

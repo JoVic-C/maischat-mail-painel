@@ -1,8 +1,6 @@
 <div class="auth">
   <div class="auth-card">
     <app-logo class="brand" variant="full" size="34px" markColor="brand"></app-logo>
-
-    <!-- 1. Validando o convite -->
     <ng-container *ngIf="state === 'loading'">
       <p class="sub">{{ isReset ? 'Verificando o link…' : 'Verificando seu convite…' }}</p>
       <div class="skeleton" aria-hidden="true">
@@ -14,8 +12,6 @@
       </div>
       <span class="sr-only" role="status">Verificando o link</span>
     </ng-container>
-
-    <!-- 2. Convite inválido ou expirado -->
     <ng-container *ngIf="state === 'invalid'">
       <p class="sub">{{ isReset ? 'Link indisponível' : 'Convite indisponível' }}</p>
       <p class="error-msg">{{ formError }}</p>
@@ -29,8 +25,6 @@
       </p>
       <app-button variant="ghost" [fullWidth]="true" (clicked)="goToLogin()">Ir para o login</app-button>
     </ng-container>
-
-    <!-- 3. Definir a senha -->
     <ng-container *ngIf="state === 'ready'">
       <p class="sub">
         <ng-container *ngIf="isReset">Escolha uma nova senha para sua conta</ng-container>

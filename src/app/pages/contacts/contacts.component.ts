@@ -4,6 +4,7 @@ import { Contact, ContactQuery, ContactStatus, DeliveryFilter, List, SaveContact
 import { ApiService } from '../../services/api.service';
 import { ConfirmService } from '../../shared/confirm/confirm.service';
 import { baixarBlob } from '../../shared/download';
+import { MultiSelectOption } from '../../shared/multi-select/multi-select.component';
 import { apiErrorMessage, ServerErrorsHandler } from '../../shared/server-errors/server-errors';
 import { ToastService } from '../../shared/toast/toast.service';
 
@@ -18,6 +19,7 @@ const PAGE_SIZE = 50;
 export class ContactsComponent implements OnInit, OnDestroy {
   contacts: Contact[] = [];
   lists: List[] = [];
+  listOptions: MultiSelectOption[] = [];
   total = 0;
   page = 1;
   limit = PAGE_SIZE;
@@ -55,7 +57,6 @@ export class ContactsComponent implements OnInit, OnDestroy {
     email: 'Informe um email válido.',
   };
 
-  /** Texto de erro do campo (servidor ou validação local). */
   fieldError(field: string): string {
     return this.serverErrors.messageFor(field, this.LOCAL_ERRORS);
   }
@@ -82,7 +83,11 @@ export class ContactsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.load();
     this.api.getLists().subscribe({
-      next: (lists) => (this.lists = lists),
+      next: (lists) => {
+        this.lists = lists;
+        this.listOptions = lists.map((l) => ({ value: l._id, label: l.name, meta: `${l.contactCount} ${l.contactCount === 1 ? 'contato' : 'contatos'}`,
+        }));
+      },
       // A listagem de listas é acessória: falhar aqui não pode derrubar a tela.
       error: (err) => this.toast.apiError(err),
     });
@@ -103,10 +108,7 @@ export class ContactsComponent implements OnInit, OnDestroy {
       : 'Nenhum contato ainda. Importe um CSV ou cadastre o primeiro!';
   }
 
-  /**
-   * O recorte que o usuário está vendo. Usado pela listagem E pela exportação — se
-   * cada uma montasse o seu, o arquivo exportado poderia não bater com a tela.
-   */
+  /** Compartilhado por listagem e exportação, para o arquivo bater com a tela. */
   private filtrosAtuais(): ContactQuery {
     return {
       search: this.search,
@@ -141,7 +143,6 @@ export class ContactsComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** Qualquer mudança de filtro volta para a primeira página. */
   reload(): void {
     this.page = 1;
     this.clearSelection();
@@ -158,8 +159,6 @@ export class ContactsComponent implements OnInit, OnDestroy {
     clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => this.reload(), 300);
   }
-
-  // ─── Seleção em lote ───
 
   get allSelected(): boolean {
     return this.contacts.length > 0 && this.contacts.every((c) => this.selectedIds.has(c._id));
@@ -211,8 +210,6 @@ export class ContactsComponent implements OnInit, OnDestroy {
       });
   }
 
-  // ─── CRUD ───
-
   openCreate(): void {
     this.editingId = null;
     this.formError = '';
@@ -246,10 +243,6 @@ export class ContactsComponent implements OnInit, OnDestroy {
 
   exportando = false;
 
-  /**
-   * Exporta o que está na tela — com busca e filtros aplicados, não a base inteira.
-   * É o mesmo recorte que o usuário está vendo, que é o que ele espera receber.
-   */
   exportar(): void {
     this.exportando = true;
     this.api.exportContacts(this.filtrosAtuais()).subscribe({

@@ -2,8 +2,6 @@
   <div class="auth-card">
     <app-logo class="brand" variant="full" size="34px" markColor="brand"></app-logo>
 
-
-    <!-- Login -->
     <ng-container *ngIf="!forgotMode">
     <p class="sub">Entre para acessar o painel</p>
 
@@ -41,8 +39,6 @@
 
     <button type="button" class="link-btn" (click)="abrirRecuperacao()">Esqueci minha senha</button>
     </ng-container>
-
-    <!-- Recuperação de senha -->
     <ng-container *ngIf="forgotMode">
       <p class="sub">Recuperar acesso</p>
 

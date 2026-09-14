@@ -25,12 +25,10 @@ export class LoginComponent implements OnDestroy {
     password: 'Informe a senha.',
   };
 
-  /** Texto de erro do campo (servidor ou validação local). */
   fieldError(field: string): string {
     return this.serverErrors.messageFor(field, this.LOCAL_ERRORS);
   }
 
-  /** A tela alterna entre login e pedido de recuperação, sem trocar de rota. */
   forgotMode = false;
   forgotEmail = '';
   forgotSent = false;
@@ -57,7 +55,6 @@ export class LoginComponent implements OnDestroy {
     this.forgotMode = true;
     this.forgotSent = false;
     this.formError = '';
-    // Aproveita o email já digitado no login — quem esqueceu a senha costuma ter tentado antes.
     this.forgotEmail = this.form.value.email ?? '';
   }
 
@@ -66,10 +63,7 @@ export class LoginComponent implements OnDestroy {
     this.forgotSent = false;
   }
 
-  /**
-   * Pede a recuperação. A tela mostra SEMPRE a mesma confirmação, exista o email ou
-   * não — é o que impede a página de virar ferramenta para descobrir quem tem conta.
-   */
+  /** Mesma confirmação exista o email ou não, para não revelar quem tem conta. */
   enviarRecuperacao(): void {
     if (!this.forgotEmail.trim()) return;
     this.forgotLoading = true;
@@ -80,7 +74,7 @@ export class LoginComponent implements OnDestroy {
       },
       error: () => {
         this.forgotLoading = false;
-        this.forgotSent = true; // mesma resposta em qualquer desfecho
+        this.forgotSent = true;
       },
     });
   }

@@ -10,8 +10,6 @@
 .name { font-weight: 600; }
 .tag { margin-left: 6px; }
 tr.row-active td { background: var(--oxl); }
-
-/* Caixa do link de acesso do cliente recém-criado — mesmo formato da tela de usuários. */
 .inv-intro { font-size: 13.5px; color: var(--t2); margin: 0 0 14px; line-height: 1.55; }
 
 .inv-link {
@@ -31,11 +29,7 @@ tr.row-active td { background: var(--oxl); }
   line-height: 1.45;
 }
 
-/* ─── Linha do cliente ─── */
-
-/* Nome + identificador empilhados: o slug é atributo do cliente, não dado de
-   comparação entre linhas. Como coluna própria, só consumia a largura que faltava
-   às ações. */
+/* Slug empilhado sob o nome: como coluna própria, roubava largura das ações. */
 .cli { display: flex; align-items: center; gap: 8px; }
 .cli-name { font-weight: 700; color: var(--n); }
 .cli-slug {

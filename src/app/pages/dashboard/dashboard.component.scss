@@ -1,8 +1,6 @@
 
 .camp-row { cursor: pointer; }
 .camp-row:hover td { background: var(--oxl); }
-
-/* Gráfico de barras com tooltip customizado */
 .chart { display: flex; align-items: flex-end; justify-content: center; gap: 4px; height: 180px; position: relative; }
 .col { flex: 1; max-width: 72px; height: 100%; display: flex; align-items: flex-end; position: relative; }
 .col-bar {
@@ -29,12 +27,8 @@
 .tip-date { font-weight: 800; color: #a78bfa; margin-bottom: 3px; letter-spacing: 0.3px; }
 .col-tip b { font-size: 13px; }
 
-/* ─── Relatório de envios ─── */
-
 .rel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 .rel-titulo { font-size: 15px; font-weight: 800; color: var(--n); }
-
-/* Atalhos de período: um grupo só, com o ativo em destaque. */
 .periodos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .periodo {
   border: 1px solid var(--br);
@@ -51,8 +45,6 @@
 .periodo:hover { border-color: var(--o); color: var(--n); }
 .periodo:focus-visible { outline: 2px solid var(--o); outline-offset: 2px; }
 .periodo.ativo { background: var(--o); border-color: var(--o); color: #fff; }
-
-/* Período livre. Some no mobile? Não: quebra em duas linhas e continua utilizável. */
 .periodo-livre {
   display: flex;
   align-items: center;
@@ -77,8 +69,7 @@
 .periodo-livre input:focus-visible,
 .periodo-livre select:focus-visible { outline: 2px solid var(--o); outline-offset: 1px; }
 
-/* Totais do período. Grid de colunas iguais: com spans soltos, o último número
-   caía sozinho numa segunda linha assim que a janela apertava. */
+/* Colunas iguais: com spans soltos o último número caía sozinho numa segunda linha. */
 .rel-totais {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -98,8 +89,7 @@
 .rel-total span { font-size: 11.5px; color: var(--g50); }
 .rel-total i { font-style: normal; color: var(--g40); }
 
-/* ─── Eixos do gráfico ───
-   Sem escala, uma barra alta não diz se são 10 ou 10 mil emails. */
+/* Sem escala, uma barra alta não diz se são 10 ou 10 mil emails. */
 .chart-wrap { display: flex; gap: 10px; }
 .chart-y {
   display: flex;
@@ -142,7 +132,6 @@
   .rel-head { flex-direction: column; align-items: flex-start; }
 }
 
-/* O rótulo é centrado na coluna; nas pontas isso jogaria metade da data para fora
-   do cartão. Os extremos encostam na borda de dentro. */
+/* Centrado, o rótulo das pontas sairia do cartão: os extremos encostam na borda. */
 .col-x:first-child { text-align: left; }
 .col-x:last-child { text-align: right; }

@@ -8,7 +8,6 @@ import { RouterModule, Routes } from '@angular/router';
 
 import { AppComponent } from './app.component';
 
-// ─── Compartilhados ───
 import { ButtonComponent } from './shared/button/button.component';
 import { RowMenuComponent } from './shared/row-menu/row-menu.component';
 import { ConfirmComponent } from './shared/confirm/confirm.component';
@@ -17,6 +16,7 @@ import { DataStateComponent } from './shared/data-state/data-state.component';
 import { EmptyStateComponent } from './shared/empty-state/empty-state.component';
 import { LogoComponent } from './shared/logo/logo.component';
 import { ModalComponent } from './shared/modal/modal.component';
+import { MultiSelectComponent } from './shared/multi-select/multi-select.component';
 import { NavbarComponent } from './shared/navbar/navbar.component';
 import { PageTitleComponent } from './shared/page-title/page-title.component';
 import { PaginatorComponent } from './shared/paginator/paginator.component';
@@ -28,7 +28,6 @@ import { ToastContainerComponent } from './shared/toast/toast-container.componen
 import { adminGuard, authGuard, superadminGuard, tenantGuard } from './guards/auth.guard';
 import { TokenInterceptor } from './services/token.interceptor';
 
-// ─── Telas ───
 import { AccountComponent } from './pages/account/account.component';
 import { CampaignsComponent } from './pages/campaigns/campaigns.component';
 import { ContactsComponent } from './pages/contacts/contacts.component';
@@ -40,15 +39,11 @@ import { OperacaoComponent } from './pages/operacao/operacao.component';
 import { PlatformComponent } from './pages/platform/platform.component';
 import { SegmentsComponent } from './pages/segments/segments.component';
 import { SmtpComponent } from './pages/smtp/smtp.component';
+import { DomainsComponent } from './pages/domains/domains.component';
 import { TemplatesComponent } from './pages/templates/templates.component';
 import { TenantsComponent } from './pages/tenants/tenants.component';
 import { UsersComponent } from './pages/users/users.component';
 
-/**
- * tenantGuard     → telas que operam DENTRO de um cliente (exigem contexto de tenant).
- * adminGuard      → administração do cliente (SMTP, equipe).
- * superadminGuard → administração da plataforma (clientes).
- */
 const routes: Routes = [
   { path: 'login', component: LoginComponent },
   // Público: quem abre o link do convite ainda não tem sessão.
@@ -64,28 +59,27 @@ const routes: Routes = [
   { path: 'segments', component: SegmentsComponent, canActivate: [tenantGuard] },
 
   { path: 'smtp', component: SmtpComponent, canActivate: [adminGuard] },
+  { path: 'dominios', component: DomainsComponent, canActivate: [adminGuard] },
   { path: 'equipe', component: UsersComponent, canActivate: [adminGuard] },
 
   { path: 'clientes', component: TenantsComponent, canActivate: [superadminGuard] },
   { path: 'operacao', component: OperacaoComponent, canActivate: [superadminGuard] },
-  // Motor de envio: configuração da plataforma, acima dos clientes.
   { path: 'plataforma', component: PlatformComponent, canActivate: [superadminGuard] },
   { path: 'conta', component: AccountComponent, canActivate: [authGuard] },
 
   { path: '**', redirectTo: 'dashboard' },
 ];
 
-// O painel é em português: sem isto os pipes number/date formatam em en-US e um
-// contador de contatos aparece como "10,000" em vez de "10.000".
+// Sem isto os pipes number/date formatam em en-US ("10,000" em vez de "10.000").
 registerLocaleData(localePt);
 
 @NgModule({
   declarations: [
     AppComponent,
-    // compartilhados
     ButtonComponent,
     RowMenuComponent,
     ModalComponent,
+    MultiSelectComponent,
     LogoComponent,
     NavbarComponent,
     PageTitleComponent,
@@ -98,7 +92,6 @@ registerLocaleData(localePt);
     ConfirmComponent,
     PromptComponent,
     CsvImportComponent,
-    // telas
     LoginComponent,
     InviteComponent,
     DashboardComponent,
@@ -108,6 +101,7 @@ registerLocaleData(localePt);
     CampaignsComponent,
     SegmentsComponent,
     SmtpComponent,
+    DomainsComponent,
     UsersComponent,
     TenantsComponent,
     PlatformComponent,

@@ -1,11 +1,4 @@
-/* ═══════════════════════════════════════════════════════════════
-   mMail — Design system global.
-   Mesma abordagem do Portal de Parceiros: componentes estilizados
-   por variáveis CSS (definidas em index.html :root).
-   Trocar uma cor = editar a variável, não este arquivo.
-   ═══════════════════════════════════════════════════════════════ */
-
-/* ─── Layout base ─── */
+/* Cores vêm das variáveis CSS em index.html :root, não deste arquivo. */
 .container {
   max-width: 1100px;
   margin: 0 auto;
@@ -17,8 +10,6 @@
   border-radius: 14px;
   padding: 20px;
 }
-
-/* ─── Botões (fonte única — <app-button> e .btn legado) ─── */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -57,16 +48,10 @@
 .btn-sm { padding: 5px 12px; font-size: 11px; border-radius: 6px; }
 .btn-lg { padding: 12px 28px; font-size: 14px; }
 .btn-full { width: 100%; }
-
-/* ─── Título de página ─── */
 .pg-title { font-size: 20px; font-weight: 800; color: var(--n); margin-bottom: 14px; }
 .pg-sub { font-size: 13px; color: var(--g50); margin-top: -8px; margin-bottom: 18px; }
-
-/* ─── Estado vazio ─── */
 .empty { color: var(--g50); font-size: 13px; text-align: center; padding: 24px 12px; }
 .empty a { color: var(--o); text-decoration: underline; }
-
-/* ─── Stat boxes — <app-stat-card variant="orange|neutral"> ─── */
 .fb, .sb {
   border-radius: 12px;
   padding: 16px 14px;
@@ -80,8 +65,6 @@
 .fb .v.r, .sb .sn.r { color: var(--r); }
 .fb .v.nv, .sb .sn.nv { color: var(--n); }
 .fb .k, .sb .sl { font-size: 11px; color: var(--g50); margin-top: 4px; font-weight: 600; }
-
-/* ─── Tabelas ─── */
 table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
 table.tbl th {
   text-align: left; padding: 10px 12px; color: var(--g50);
@@ -90,8 +73,6 @@ table.tbl th {
 }
 table.tbl td { padding: 12px; border-bottom: 1px solid var(--br); color: var(--t); }
 table.tbl tr:hover td { background: var(--oxl); }
-
-/* ─── Inputs ─── */
 input, select, textarea {
   width: 100%;
   padding: 9px 12px;
@@ -113,8 +94,6 @@ input.is-invalid, select.is-invalid, textarea.is-invalid {
 }
 .field-error { color: var(--r); font-size: 11px; margin-top: 5px; font-weight: 500; display: block; }
 textarea { min-height: 90px; resize: vertical; }
-
-/* ─── Grid / layout utilitário ─── */
 .grid { display: grid; gap: 16px; }
 .grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
 .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
@@ -125,14 +104,10 @@ textarea { min-height: 90px; resize: vertical; }
 .row-between { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
 .muted { color: var(--g50); font-size: 12px; }
 .lead { color: var(--t2); font-size: 13px; margin: -6px 0 18px; }
-
-/* ─── Stat box (uso direto: <div class="stat"><div class="v"></div><div class="k"></div></div>) ─── */
 .stat { background: var(--c); border: 1px solid var(--br); border-radius: 12px; padding: 16px; }
 .stat .v { font-size: 24px; font-weight: 800; color: var(--o); line-height: 1.1; }
 .stat .k { font-size: 11.5px; color: var(--g50); margin-top: 4px; font-weight: 600; }
 .stat.hl { background: var(--ol); border-color: #FFD9C7; }
-
-/* ─── Badges ─── */
 .badge {
   display: inline-block; padding: 2px 10px; border-radius: 12px;
   font-size: 11px; font-weight: 700; text-transform: lowercase; letter-spacing: 0.2px;
@@ -148,8 +123,6 @@ textarea { min-height: 90px; resize: vertical; }
   from { opacity: 0; transform: translateY(8px) scale(0.98); }
   to { opacity: 1; transform: none; }
 }
-
-/* ─── Campo de formulário ─── */
 .field { margin-bottom: 12px; }
 .field label {
   display: block; font-size: 10px; font-weight: 700; text-transform: uppercase;
@@ -157,12 +130,6 @@ textarea { min-height: 90px; resize: vertical; }
 }
 
 
-/* ═══════════════════════════════════════════════════════════════
-   Estados de carregamento, erro e navegação — adicionados no
-   fechamento do frontend. Mesma regra: cor vem das variáveis.
-   ═══════════════════════════════════════════════════════════════ */
-
-/* ─── Acessibilidade ─── */
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
@@ -181,8 +148,6 @@ textarea { min-height: 90px; resize: vertical; }
   outline: 2px solid var(--o);
   outline-offset: 2px;
 }
-
-/* ─── Estado de erro de carregamento ─── */
 .state-error {
   display: flex; align-items: center; gap: 14px;
   background: var(--rl); border: 1px solid #f5c6c4; border-radius: 12px;
@@ -192,24 +157,18 @@ textarea { min-height: 90px; resize: vertical; }
 .state-error .txt { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .state-error .txt strong { color: var(--n); font-size: 13.5px; font-weight: 800; }
 .state-error .txt span { color: var(--t2); font-size: 12.5px; }
-
-/* ─── Tabelas: rolagem horizontal própria no mobile ─── */
 .tbl-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .ta-right { text-align: right; }
 
-/* O cabeçalho precisa acompanhar o alinhamento da coluna, senão o título fica num
-   canto e o conteúdo no outro. `table.tbl th` fixa text-align:left com especificidade
-   maior que .ta-right sozinha — daí a repetição do seletor aqui. */
+/* `table.tbl th` fixa text-align:left com especificidade maior que .ta-right,
+   daí a repetição do seletor. */
 table.tbl th.ta-right,
 table.tbl td.ta-right {
   text-align: right;
 }
 
-/* Célula de ações.
-   NÃO usar display:flex aqui: um <td> com flex sai do algoritmo de tabela e a linha
-   desalinha (o Firefox mostra isso na borda inferior). Como o <app-button> já é
-   inline-block, alinhar à direita e espaçar por margem dá o mesmo resultado sem
-   quebrar a célula — e os botões ainda quebram sozinhos em telas estreitas. */
+/* NÃO usar display:flex: um <td> com flex sai do algoritmo de tabela e a linha
+   desalinha. */
 table.tbl td.row-actions {
   text-align: right;
 }
@@ -217,19 +176,13 @@ table.tbl td.row-actions {
 table.tbl td.row-actions > * {
   margin: 3px 0 3px 6px;
 }
-
-/* Indicadores em atualização: esmaece sem sumir com o layout. */
 .is-loading { opacity: 0.55; transition: opacity 0.2s; }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Formulário dentro do <app-modal>.
-   Precisa ser global: o conteúdo é PROJETADO pelo componente pai,
-   então o CSS encapsulado do modal não o alcançaria.
-   ═══════════════════════════════════════════════════════════════ */
+/* Global: o conteúdo do <app-modal> é projetado, o CSS encapsulado não o alcança. */
 
 .modal-body .ff { display: flex; flex-direction: column; gap: 6px; }
 .modal-body .ff label {
@@ -255,8 +208,6 @@ table.tbl td.row-actions > * {
 .modal-body input.is-invalid,
 .modal-body select.is-invalid,
 .modal-body textarea.is-invalid { border-color: var(--r); background: var(--rl); }
-
-/* Linha de dois campos (colapsa no mobile). */
 .rw { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 520px) { .rw { grid-template-columns: 1fr; } }
 

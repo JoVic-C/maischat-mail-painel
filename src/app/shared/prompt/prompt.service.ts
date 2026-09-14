@@ -10,12 +10,7 @@ export interface PromptOptions {
   type?: 'text' | 'email' | 'url';
 }
 
-/**
- * Entrada de texto em modal — substitui o prompt() nativo, que é bloqueante,
- * sem identidade visual e desabilitado por padrão em vários navegadores.
- *
- * Uso: this.prompt.ask({ label: 'Email' }).then(v => { if (v) ... });
- */
+/** Substitui o prompt() nativo, bloqueante e desabilitado em vários navegadores. */
 @Injectable({ providedIn: 'root' })
 export class PromptService {
   state: Required<PromptOptions> | null = null;

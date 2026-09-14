@@ -33,7 +33,7 @@
 .live-box { max-height: 240px; overflow-y: auto; border: 1px solid var(--br); border-radius: 8px; }
 .live .muted { margin-top: 6px; }
 
-/* Área de escolha do arquivo. O input nativo fica escondido atrás do label. */
+/* O input nativo fica escondido atrás do label. */
 .dropzone {
   display: flex; align-items: center; gap: 10px;
   padding: 18px 16px; cursor: pointer;
@@ -49,9 +49,8 @@
   overflow: hidden; clip: rect(0 0 0 0);
 }
 .dz-icon { font-size: 20px; line-height: 1; }
-/* O dropzone é um <label> e cai na regra global `.ff label`, que deixa rótulos de
-   campo em CAIXA ALTA com letra minúscula. Um nome de arquivo não é rótulo: precisa
-   sair exatamente como o usuário o vê no computador dele. */
+/* O dropzone é um <label> e herdaria a caixa alta de `.ff label`;
+   o nome do arquivo precisa sair como está. */
 .dz-text {
   font-size: 13px;
   font-weight: 600;
@@ -63,11 +62,7 @@
 
 .file-line { margin-bottom: 10px; }
 
-/*
-  Enquanto o worker roda não há porcentagem confiável — o total de linhas só é
-  conhecido no fim do arquivo. A barra corre para mostrar que há trabalho
-  acontecendo, sem fingir que sabe quanto falta.
-*/
+/* Sem total de linhas conhecido, a barra corre sem fingir porcentagem. */
 .progress-bar.full { width: 100%; }
 .progress-bar.indeterminate {
   width: 40%;

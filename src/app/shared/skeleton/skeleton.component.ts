@@ -1,10 +1,6 @@
 import { Component, Input } from '@angular/core';
 
-/**
- * Placeholder animado no formato de tabela, exibido enquanto os dados carregam.
- * Evita o "falso vazio": sem ele, a tela mostra o empty state por uma fração de
- * segundo antes da resposta chegar.
- */
+/** Evita o "falso vazio": o empty state piscando antes da resposta chegar. */
 @Component({
     selector: 'app-skeleton',
     template: `

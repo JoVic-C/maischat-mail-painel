@@ -84,8 +84,6 @@
           {{ advanced ? '← Editor visual' : '&lt;/&gt; HTML avançado' }}
         </app-button>
       </div>
-
-      <!-- Modo VISUAL -->
       <div *ngIf="!advanced">
         <div class="toolbar" (mousedown)="$event.preventDefault()" role="toolbar" aria-label="Formatação">
           <button type="button" (click)="exec('bold')" title="Negrito" aria-label="Negrito"><b>N</b></button>
@@ -120,13 +118,12 @@
           [class.is-invalid]="form.controls['html'].touched && form.controls['html'].invalid"
           contenteditable="true"
           (input)="syncFromEditor()"
+          (paste)="onPaste($event)"
           role="textbox"
           aria-multiline="true"
           aria-label="Conteúdo do email"
         ></div>
       </div>
-
-      <!-- Modo HTML avançado -->
       <textarea
         *ngIf="advanced"
         formControlName="html"
@@ -139,9 +136,10 @@
       <div class="field-error" *ngIf="fieldError('html')">{{ fieldError('html') }}</div>
     </div>
 
-    <div class="ff" *ngIf="previewHtml">
+    <div class="ff" *ngIf="previewHtml && previewDoc">
       <label>Prévia (com dados de exemplo)</label>
-      <div class="preview" [innerHTML]="previewHtml"></div>
+      <!-- sandbox vazio: sem script, sem origem. O documento já chega limpo pelo DOMPurify. -->
+      <iframe class="preview" sandbox="" [srcdoc]="previewDoc" title="Prévia do email"></iframe>
     </div>
   </form>
 

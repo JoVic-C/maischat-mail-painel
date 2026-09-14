@@ -1,13 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-/**
- * E2E do painel mMail.
- *
- * A API é dublada no próprio navegador (ver e2e/fixtures/api-mock.ts): o quality gate
- * do projeto proíbe teste que dependa de Mongo, Redis, SMTP ou DNS reais. O contrato
- * do backend já é coberto pelos testes de integração do Jest (../backend); aqui o alvo
- * é o comportamento da interface — rotas, guards, validação, estados e fluxo de disparo.
- */
+/** A API é dublada no navegador (e2e/fixtures/api-mock.ts): nada de Mongo, Redis ou SMTP reais. */
 export default defineConfig({
   testDir: './e2e',
   /* Cada spec instala seu próprio dublê de API, então não há estado compartilhado. */

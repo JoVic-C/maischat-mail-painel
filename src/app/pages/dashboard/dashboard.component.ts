@@ -3,12 +3,7 @@ import { Agrupamento, DashboardStats, PontoEnvio, RelatorioEnvios } from '../../
 import { ApiService } from '../../services/api.service';
 import { apiErrorMessage } from '../../shared/server-errors/server-errors';
 
-/**
- * Atalhos de período.
- *
- * Cada um já traz o agrupamento que faz sentido para a janela: um ano por dia daria
- * 365 barras ilegíveis, e um dia por mês daria uma barra só.
- */
+/** Cada atalho traz o agrupamento adequado à janela (um ano por dia daria 365 barras). */
 interface Preset {
   id: string;
   rotulo: string;
@@ -55,13 +50,7 @@ function proximoBalde(iso: string, agrupamento: Agrupamento): string {
   return inicioBrasilia(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
 }
 
-/**
- * Reintroduz os baldes sem nenhum envio.
- *
- * O backend só devolve os períodos que têm registro. No gráfico isso mente: janeiro e
- * setembro sairiam como duas barras vizinhas, escondendo os sete meses parados entre
- * elas. Aqui a linha do tempo volta a ser contínua.
- */
+/** O backend só devolve baldes com registro; sem preencher, períodos parados sumiriam do gráfico. */
 function preencherVazios(serie: PontoEnvio[], agrupamento: Agrupamento): PontoEnvio[] {
   if (serie.length < 2) return serie;
 
@@ -69,8 +58,7 @@ function preencherVazios(serie: PontoEnvio[], agrupamento: Agrupamento): PontoEn
   const fim = serie[serie.length - 1].inicio;
   const cheia: PontoEnvio[] = [];
 
-  // O backend já recusa janelas com mais de 400 baldes; o teto aqui é só um freio de mão
-  // para nunca girar sem fim caso a data volte malformada.
+  // Teto contra laço infinito se a data vier malformada (o backend já limita a 400 baldes).
   let atual = serie[0].inicio;
   for (let i = 0; i < 500 && atual <= fim; i++) {
     cheia.push(
@@ -90,10 +78,7 @@ function preencherVazios(serie: PontoEnvio[], agrupamento: Agrupamento): PontoEn
   return cheia;
 }
 
-/**
- * Topo da escala vertical: o próximo número redondo acima do maior valor (1, 2 ou 5
- * vezes uma potência de dez), para que as marcas do eixo sejam legíveis.
- */
+/** Próximo número redondo (1, 2 ou 5 × 10ⁿ) acima do maior valor, para o eixo ser legível. */
 function escalaRedonda(maior: number): number {
   const potencia = 10 ** Math.floor(Math.log10(maior));
   for (const passo of [1, 2, 5, 10]) {
@@ -120,7 +105,6 @@ export class DashboardComponent implements OnInit {
   loadingStats = false;
   statsError: string | null = null;
 
-  // ─── Relatório de envios ───
   relatorio: RelatorioEnvios | null = null;
   loadingEnvios = false;
   enviosError: string | null = null;
@@ -128,14 +112,12 @@ export class DashboardComponent implements OnInit {
   readonly presets = PRESETS;
   presetAtivo = '30d';
 
-  /** Período personalizado, no formato do input de data. */
   de = '';
   ate = '';
   agrupamento: Agrupamento = 'day';
 
   private maiorBarra = 1;
 
-  /** Valores das linhas de grade, de baixo para cima. */
   marcasEixoY: number[] = [0, 0, 0];
 
   constructor(private api: ApiService) {}
@@ -160,7 +142,6 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  /** Atalho de período: preenche as datas e recarrega. */
   aplicarPreset(id: string): void {
     const preset = this.presets.find((p) => p.id === id);
     if (!preset) return;
@@ -175,7 +156,6 @@ export class DashboardComponent implements OnInit {
     this.carregarEnvios();
   }
 
-  /** Mudou data ou agrupamento na mão: sai do atalho e recarrega. */
   aplicarPeriodo(): void {
     this.presetAtivo = '';
     this.carregarEnvios();
@@ -185,8 +165,7 @@ export class DashboardComponent implements OnInit {
     this.loadingEnvios = true;
     this.enviosError = null;
 
-    // As datas do input são só o dia; o fim vai até o último instante, senão o próprio
-    // dia de hoje entraria vazio no relatório.
+    // O fim vai até o último instante do dia, senão hoje entraria vazio.
     const de = this.de ? `${this.de}T00:00:00` : undefined;
     const ate = this.ate ? `${this.ate}T23:59:59` : undefined;
 
@@ -194,8 +173,6 @@ export class DashboardComponent implements OnInit {
       next: (relatorio) => {
         this.relatorio = { ...relatorio, serie: preencherVazios(relatorio.serie, relatorio.agrupamento) };
         this.loadingEnvios = false;
-        // O topo da escala é arredondado para cima: uma grade marcada em 668 não
-        // ajuda ninguém a ler o gráfico; marcada em 800, sim.
         this.maiorBarra = escalaRedonda(Math.max(1, ...relatorio.serie.map((p) => p.enviados)));
         this.marcasEixoY = [0, this.maiorBarra / 2, this.maiorBarra];
       },
@@ -207,7 +184,6 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  /** Rótulo do ponto, conforme o agrupamento — o backend só devolve a data de início. */
   rotulo(ponto: PontoEnvio): string {
     const { ano, mes, dia } = emBrasilia(ponto.inicio);
 
@@ -216,16 +192,12 @@ export class DashboardComponent implements OnInit {
     return `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}`;
   }
 
-  /** Texto de apoio abaixo do gráfico, explicando o que a barra representa. */
   get descricaoAgrupamento(): string {
     const mapa: Record<Agrupamento, string> = { day: 'por dia', week: 'por semana', month: 'por mês' };
     return mapa[this.relatorio?.agrupamento ?? 'day'];
   }
 
-  /**
-   * Quais baldes ganham data no eixo X. Com 90 barras, uma data por barra vira
-   * borrão: mostramos no máximo umas oito, sempre incluindo a última.
-   */
+  /** No máximo ~8 datas no eixo X, sempre incluindo a última. */
   mostraRotulo(indice: number): boolean {
     const total = this.relatorio?.serie.length ?? 0;
     if (total <= 8) return true;
@@ -235,8 +207,7 @@ export class DashboardComponent implements OnInit {
   }
 
   alturaBarra(enviados: number): number {
-    // Zero não desenha nada: um traço mínimo faria o mês parado parecer igual ao mês
-    // de um envio só. Acima de zero, o mínimo garante que um envio ainda apareça.
+    // Zero não desenha nada, para não se confundir com o traço mínimo de um envio só.
     if (!enviados) return 0;
     return Math.max(3, (enviados / this.maiorBarra) * 100);
   }

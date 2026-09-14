@@ -13,14 +13,11 @@ export function apiErrorMessage(err: unknown): string {
   if (typeof err === 'string') return err;
 
   if (err instanceof HttpErrorResponse) {
-    // Sem resposta do servidor: rede fora, API no ar? (status 0)
     if (err.status === 0) return 'Sem conexão com o servidor. Verifique se a API está no ar.';
 
     const body = err.error as { error?: string; code?: string; errors?: ServerFieldError[] } | null;
 
-    // Rota que o servidor não conhece: o painel está numa versão à frente da API.
-    // Repetir o "Recurso não encontrado." do backend deixaria o usuário sem saber o
-    // que fazer; o problema é de implantação, não do que ele clicou.
+    // Painel numa versão à frente da API: o problema é de implantação, não do usuário.
     if (body?.code === 'ROTA_INEXISTENTE') {
       return 'Esta função ainda não existe no servidor. Ele parece estar numa versão anterior à do painel.';
     }
@@ -31,15 +28,7 @@ export function apiErrorMessage(err: unknown): string {
   return (err as Error)?.message || 'Erro inesperado.';
 }
 
-/**
- * Faz o link entre erros 400 do backend (`{ errors: [{field, message}] }`) e os controls
- * de um FormGroup, fornecendo helpers `has()`/`get()` para o template aplicar borda
- * vermelha + mensagem por campo. Erros somem automaticamente quando o usuário edita o campo.
- *
- * Use também `apply(err, labels)` passando um mapa de path → nome amigável para gerar
- * banner descritivo, e `ServerErrorsHandler.scrollToFirstInvalid()` para rolar/focar
- * automaticamente o primeiro campo com erro.
- */
+/** Liga erros 400 do backend (`{ errors: [{field, message}] }`) aos controls de um FormGroup. */
 export class ServerErrorsHandler {
   errors: Record<string, string> = {};
   private subs = new Subscription();
@@ -48,12 +37,7 @@ export class ServerErrorsHandler {
     this.watch(form);
   }
 
-  /**
-   * Mapeia uma resposta de erro HTTP. Devolve um banner pronto pra exibir:
-   * - Sem `labels`: mensagem geral do backend, ou erros sem campo concatenados.
-   * - Com `labels`: lista descritiva por campo no formato "Nome do campo: mensagem do servidor".
-   *   Múltiplos campos viram bullet list com `\n` (o `.error-msg` usa `white-space: pre-line`).
-   */
+  /** Vários campos são separados por `\n` (o `.error-msg` usa `white-space: pre-line`). */
   apply(err: HttpErrorResponse | unknown, labels: Record<string, string> = {}): string {
     this.errors = {};
     const httpErr = err as HttpErrorResponse;
@@ -84,7 +68,6 @@ export class ServerErrorsHandler {
     return payload?.error || 'Dados inválidos.';
   }
 
-  /** Monta a lista de campos com erro usando os labels passados como nome amigável. */
   private buildFieldList(labels: Record<string, string>): string {
     const entries = Object.entries(this.errors);
     if (!entries.length) return '';
@@ -93,7 +76,6 @@ export class ServerErrorsHandler {
     return `Corrija os campos abaixo:\n• ${lines.join('\n• ')}`;
   }
 
-  /** Rola até o primeiro elemento com `.is-invalid` e foca, se possível. */
   static scrollToFirstInvalid(): void {
     setTimeout(() => {
       const el = document.querySelector<HTMLElement>('.is-invalid');
@@ -119,16 +101,12 @@ export class ServerErrorsHandler {
     return !!(c && c.touched && c.invalid);
   }
 
-  /** Mensagem do servidor (vazia se não houver). Não inclui erros locais do Angular. */
+  /** Não inclui erros locais do Angular. */
   get(field: string): string {
     return this.errors[field] || '';
   }
 
-  /**
-   * Mensagem a exibir no campo: a do servidor tem prioridade; na ausência dela,
-   * a validação local do Angular (só depois que o usuário tocou no campo).
-   * Sem esta combinação o campo ficaria vermelho sem dizer o porquê.
-   */
+  /** A do servidor tem prioridade; senão, a validação local (após tocar no campo). */
   messageFor(field: string, local: Record<string, string> = {}): string {
     const fromServer = this.get(field);
     if (fromServer) return fromServer;

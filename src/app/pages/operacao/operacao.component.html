@@ -13,9 +13,7 @@
   </div>
 </div>
 
-<app-data-state [loading]="loading" [error]="error" [empty]="false" [skeletonCols]="4" (retry)="load()">
-  <!-- ─── Fila: a leitura mais barata e a que responde "está saindo?" ─── -->
-  <div class="queue">
+<app-data-state [loading]="loading" [error]="error" [empty]="false" [skeletonCols]="4" (retry)="load()">  <div class="queue">
     <div class="q">
       <span class="v">{{ overview?.queue?.waiting ?? 0 }}</span>
       <span class="k">aguardando</span>
@@ -39,7 +37,7 @@
     </div>
   </div>
 
-  <!-- ─── Por cliente: só números, sem dado pessoal ─── -->
+  <!-- Por cliente: só números, sem dado pessoal -->
   <div class="card">
     <div class="tbl-wrap">
       <table class="tbl">
@@ -75,7 +73,7 @@
     </div>
   </div>
 
-  <!-- ─── Falhas detalhadas: dado pessoal dos clientes, sob demanda e auditado ─── -->
+  <!-- Falhas detalhadas: dado pessoal, sob demanda e auditado -->
   <div class="card">
     <div class="row-between fail-head">
       <div>

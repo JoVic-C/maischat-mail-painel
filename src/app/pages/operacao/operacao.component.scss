@@ -1,6 +1,4 @@
 .ops-actions { display: flex; align-items: center; gap: 10px; }
-
-/* Alternador de janela de tempo */
 .seg {
   display: inline-flex;
   border: 1px solid var(--br);
@@ -22,8 +20,6 @@
 
 .seg button:hover { background: var(--bg); }
 .seg button.on { background: var(--n); color: #fff; }
-
-/* ─── Cartões da fila ─── */
 .queue {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -45,8 +41,6 @@
 .q .v.bad { color: var(--r); }
 .q .k { font-size: 11.5px; color: var(--g50); margin-top: 4px; font-weight: 600; }
 .q-hint { font-size: 10.5px; color: var(--g70); margin-top: 2px; }
-
-/* ─── Tabelas ─── */
 .num { font-variant-numeric: tabular-nums; }
 .bad { color: var(--r); font-weight: 600; }
 .row-bad { background: var(--rl); }

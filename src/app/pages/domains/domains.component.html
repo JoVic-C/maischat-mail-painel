@@ -1,0 +1,86 @@
+<app-page-title subtitle="SPF, DKIM e DMARC do domínio que aparece no remetente">Domínios de envio</app-page-title>
+
+<div class="note" *ngIf="overview && overview.enforced">
+  <span class="ico" aria-hidden="true">🛡️</span>
+  <div>
+    <strong>Campanhas só disparam com o domínio liberado</strong>
+    Vale para os servidores SMTP que apontam para <b>{{ overview.platformHosts.join(', ') }}</b>. Os registros abaixo
+    são criados no DNS do domínio; quem usa Google Workspace continua recebendo email no Google normalmente.
+  </div>
+</div>
+
+<div class="note" *ngIf="overview && !overview.enforced">
+  <span class="ico" aria-hidden="true">ℹ️</span>
+  <div>
+    <strong>Verificação desligada nesta instalação</strong>
+    Nenhum servidor da plataforma está configurado, então os disparos não passam por esta checagem.
+  </div>
+</div>
+
+<app-data-state
+  [loading]="loading"
+  [error]="error"
+  [empty]="!overview?.domains?.length"
+  emptyText="Nenhum servidor SMTP da plataforma com remetente cadastrado. Cadastre um em Ajustes › SMTP."
+  [skeletonCols]="3"
+  (retry)="load()"
+>
+  <section class="card domain" *ngFor="let d of overview?.domains; trackBy: trackByDomain" [attr.data-domain]="d.domain">
+    <header class="d-head">
+      <div class="d-title">
+        <h2 class="d-name">{{ d.domain }}</h2>
+        <p class="muted">
+          {{ d.smtpNames.join(', ') }} ·
+          {{ d.checkedAt ? 'verificado em ' + (d.checkedAt | date: 'dd/MM/yyyy HH:mm') : 'nunca verificado' }}
+        </p>
+      </div>
+      <div class="d-actions">
+        <span class="badge" [class.green]="d.status === 'verified'" [class.yellow]="d.status !== 'verified'">
+          {{ d.status === 'verified' ? 'liberado' : 'pendente' }}
+        </span>
+        <app-button variant="outline" size="sm" [loading]="verifying.has(d.domain)" (click)="verify(d)">
+          Verificar agora
+        </app-button>
+      </div>
+    </header>
+
+    <div class="check" *ngFor="let r of d.records" [attr.data-check]="r.check">
+      <div class="c-top">
+        <span class="c-dot" [ngClass]="d.checks?.[r.check]?.state ?? 'none'" aria-hidden="true"></span>
+        <strong>{{ labels[r.check] }}</strong>
+        <span class="muted">{{ purposes[r.check] }}</span>
+      </div>
+
+      <p class="c-detail" *ngIf="d.checks?.[r.check] as c" [ngClass]="c.state" role="status">
+        {{ c.detail }}
+      </p>
+
+      <dl class="record">
+        <div class="r-row">
+          <dt>Tipo</dt>
+          <dd>{{ r.type }}</dd>
+        </div>
+        <div class="r-row">
+          <dt>Nome</dt>
+          <dd>
+            <code>{{ r.host }}</code>
+            <button type="button" class="copy" (click)="copy(r.host)" [attr.aria-label]="'Copiar nome do ' + labels[r.check]">
+              copiar
+            </button>
+          </dd>
+        </div>
+        <div class="r-row">
+          <dt>Valor</dt>
+          <dd *ngIf="r.value; else semValor">
+            <code>{{ r.value }}</code>
+            <button type="button" class="copy" (click)="copy(r.value)" [attr.aria-label]="'Copiar valor do ' + labels[r.check]">
+              copiar
+            </button>
+          </dd>
+          <ng-template #semValor><dd class="muted">—</dd></ng-template>
+        </div>
+      </dl>
+      <p class="hint sub">{{ r.note }}</p>
+    </div>
+  </section>
+</app-data-state>

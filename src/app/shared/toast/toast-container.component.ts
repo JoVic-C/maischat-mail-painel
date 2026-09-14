@@ -2,7 +2,6 @@ import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { Toast, ToastService } from './toast.service';
 
-/** Pilha de toasts — montada uma única vez no app.component. */
 @Component({
     selector: 'app-toast-container',
     templateUrl: './toast-container.component.html',

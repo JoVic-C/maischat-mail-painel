@@ -2,15 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { ADMIN, ApiMock, SUPERADMIN, seedSession } from './fixtures/api-mock';
 
-/**
- * Barra de navegação.
- *
- * O risco desta barra não é estético: com o superadmin operando dentro de um cliente
- * ela chegou a onze itens, e os últimos saíam da vista atrás de uma rolagem horizontal
- * sem indicação nenhuma — "motor de envio" simplesmente não existia para quem não
- * soubesse arrastar. O que os testes aqui travam é isso: todo caminho tem que estar
- * alcançável, em qualquer largura, sem depender de rolar algo invisível.
- */
+/** Todo item da barra tem que ser alcançável em qualquer largura, sem rolagem escondida. */
 
 /** O superadmin opera dentro de um cliente escolhido — o estado com mais itens na barra. */
 async function seedSuperadmin(page: Page): Promise<void> {
@@ -42,7 +34,6 @@ test.describe('Navegação — agrupamentos', () => {
       await expect(barra.getByRole('link', { name: rotulo })).toBeVisible();
     }
 
-    // Estes saíram da fileira — mas continuam a um clique de distância.
     await expect(page.getByRole('link', { name: 'SMTP' })).toBeHidden();
     await expect(page.getByRole('link', { name: 'Clientes' })).toBeHidden();
     await expect(page.getByRole('button', { name: 'ajustes' })).toBeVisible();
@@ -62,8 +53,7 @@ test.describe('Navegação — agrupamentos', () => {
   });
 
   test('a barra mostra onde o usuário está mesmo quando a tela vive dentro de um menu', async ({ page }) => {
-    // Sem isto, entrar em SMTP apagaria qualquer indicação de posição: o link ativo
-    // está escondido dentro do painel fechado.
+    // O link ativo fica escondido no painel fechado; o gatilho precisa indicar a posição.
     const api = new ApiMock({ user: ADMIN });
     await api.install(page);
     await seedSession(page, ADMIN);
@@ -90,7 +80,6 @@ test.describe('Navegação — agrupamentos', () => {
 });
 
 test.describe('Navegação — centro', () => {
-  /** Distância entre o centro do menu e o centro da tela. */
   async function desvioDoCentro(page: Page): Promise<number> {
     return page.evaluate(() => {
       const el = document.querySelector('.nav-links');
@@ -100,12 +89,8 @@ test.describe('Navegação — centro', () => {
     });
   }
 
-  // O menu já ficou 152px à esquerda: ele era centrado dentro da coluna do meio de um
-  // grid, e essa coluna não é simétrica — o bloco do usuário é muito mais largo que a
-  // marca. Quem olha a tela vê o desvio; quem olha só o CSS não.
-  // Na largura mais apertada o bloco do usuário já está no mínimo e não tem mais como
-  // ceder: a simetria perfeita só sairia cortando o nome do cliente. Alguns pixels de
-  // desvio ali são o preço; 152px, não.
+  // O desvio só aparece na tela, não no CSS. Na largura mínima alguns pixels são
+  // aceitos: a simetria perfeita exigiria cortar o nome do cliente.
   for (const { largura, tolerancia } of [
     { largura: 1920, tolerancia: 2 },
     { largura: 1600, tolerancia: 2 },
@@ -156,7 +141,6 @@ test.describe('Navegação — nada escondido', () => {
 
       expect(await sobraEscondida(page)).toBe(0);
 
-      // Ou os links estão na barra, ou existe o botão que abre o painel com todos.
       const naBarra = await page.locator('.nav-links > a').count();
       const temPainel = await page.locator('.nav-burger').count();
       expect(naBarra > 0 || temPainel === 1).toBe(true);
@@ -175,14 +159,12 @@ test.describe('Navegação — nada escondido', () => {
     await page.locator('.nav-burger').click();
     const painel = page.locator('.nav-painel');
 
-    // Inclusive o item que era o mais fácil de perder na versão com rolagem.
     for (const rotulo of ['dashboard', 'listas', 'contatos', 'SMTP', 'Clientes', 'Motor de envio']) {
       await expect(painel.getByRole('link', { name: rotulo })).toBeVisible();
     }
 
     await painel.getByRole('link', { name: 'contatos' }).click();
     await expect(page).toHaveURL(/\/contacts$/);
-    // Navegou: o painel sai da frente sozinho.
     await expect(page.locator('.nav-painel')).toBeHidden();
   });
 

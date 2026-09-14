@@ -13,7 +13,6 @@ import {
 const TEMPLATE = makeTemplate({ name: 'Boas vindas' });
 const LIST = makeList({ name: 'Clientes' });
 
-/** Abre a tela de campanhas já autenticado, com a API dublada. */
 async function openCampaigns(page: Page, seed: MockSeed = {}): Promise<ApiMock> {
   const api = new ApiMock({ templates: [TEMPLATE], lists: [LIST], ...seed });
   await api.install(page);
@@ -59,7 +58,6 @@ test.describe('Campanhas — listagem', () => {
     await expect(page.getByText('Não foi possível carregar')).toBeVisible();
     await expect(page.getByText('Banco indisponível.')).toBeVisible();
 
-    // Servidor volta ao normal: o retry recarrega sem sair da tela.
     api.failures.delete('campaigns');
     api.campaigns = [makeCampaign({ name: 'Retomada' })];
     await page.getByRole('button', { name: '↻ Tentar novamente' }).click();
@@ -104,9 +102,8 @@ test.describe('Campanhas — criação', () => {
     const modal = page.getByRole('dialog', { name: 'Nova campanha' });
     await modal.locator('#cp-name').fill('Newsletter Agosto');
     await modal.locator('#cp-template').selectOption(TEMPLATE._id);
-    // Em <select multiple> com formControlName o Angular troca o value de cada option
-    // por um id interno ("0", "1", ...), então a seleção tem de ser pelo rótulo visível.
-    await modal.locator('#cp-lists').selectOption({ label: `${LIST.name} (${LIST.contactCount})` });
+    await modal.locator('#cp-lists').click();
+    await modal.getByRole('option', { name: new RegExp(LIST.name) }).click();
     await modal.getByRole('button', { name: 'Criar campanha' }).click();
 
     await expect(page.getByText('Campanha criada.')).toBeVisible();
@@ -122,6 +119,42 @@ test.describe('Campanhas — criação', () => {
     });
   });
 
+  test('seleção de listas: busca, teclado e remoção pelo chip', async ({ page }) => {
+    const listas = ['Clientes', 'Leads frios', 'VIP São Paulo', 'VIP Recife', 'Parceiros', 'Newsletter', 'Eventos', 'Inativos'].map(
+      (name) => makeList({ name })
+    );
+    const api = await openCampaigns(page, { lists: listas });
+
+    await page.getByRole('button', { name: '+ Nova campanha' }).click();
+    const modal = page.getByRole('dialog', { name: 'Nova campanha' });
+    await modal.locator('#cp-name').fill('Só VIPs');
+    await modal.locator('#cp-template').selectOption(TEMPLATE._id);
+
+    await modal.locator('#cp-lists').click();
+    const busca = modal.getByRole('searchbox', { name: 'Buscar lista' });
+    await busca.fill('vip sao');
+    await expect(modal.getByRole('listbox').getByRole('option')).toHaveCount(1);
+    await page.keyboard.press('Enter');
+    await expect(modal.getByRole('option', { name: /VIP São Paulo/ })).toHaveAttribute('aria-selected', 'true');
+
+    await busca.fill('recife');
+    await modal.getByRole('option', { name: /VIP Recife/ }).click();
+
+    // Esc fecha só o painel, não o modal da campanha.
+    await page.keyboard.press('Escape');
+    await expect(modal.getByRole('listbox')).toBeHidden();
+    await expect(modal).toBeVisible();
+    await expect(modal.locator('#cp-lists')).toHaveText(/2 selecionadas/);
+
+    await modal.getByRole('button', { name: 'Remover VIP Recife' }).click();
+    await expect(modal.locator('#cp-lists')).toHaveText(/VIP São Paulo/);
+
+    await modal.getByRole('button', { name: 'Criar campanha' }).click();
+    await expect(page.getByText('Campanha criada.')).toBeVisible();
+    const vip = listas.find((l) => l.name === 'VIP São Paulo');
+    expect(api.lastCallTo('/campaigns/save')?.body).toMatchObject({ listIds: [vip?._id] });
+  });
+
   test('erro de campo do servidor aparece no formulário sem fechar o modal', async ({ page }) => {
     const api = await openCampaigns(page);
     api.fail('saveCampaign', 400, { errors: [{ field: 'name', message: 'Já existe campanha com esse nome.' }] });
@@ -130,7 +163,8 @@ test.describe('Campanhas — criação', () => {
     const modal = page.getByRole('dialog', { name: 'Nova campanha' });
     await modal.locator('#cp-name').fill('Newsletter Julho');
     await modal.locator('#cp-template').selectOption(TEMPLATE._id);
-    await modal.locator('#cp-lists').selectOption({ label: `${LIST.name} (${LIST.contactCount})` });
+    await modal.locator('#cp-lists').click();
+    await modal.getByRole('option', { name: new RegExp(LIST.name) }).click();
     await modal.getByRole('button', { name: 'Criar campanha' }).click();
 
     await expect(modal.getByText('Nome: Já existe campanha com esse nome.')).toBeVisible();
@@ -162,7 +196,6 @@ test.describe('Campanhas — disparo', () => {
 
     const row = page.getByRole('row', { name: /Newsletter Julho/ });
     await expect(row.getByText('Enviando')).toBeVisible();
-    // Em envio, a ação principal vira pausar.
     await expect(row.getByRole('button', { name: /pausar/ })).toBeVisible();
   });
 

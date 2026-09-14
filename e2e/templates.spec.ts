@@ -2,13 +2,8 @@ import { expect, test } from '@playwright/test';
 import { ADMIN, ApiMock, makeTemplate, seedSession } from './fixtures/api-mock';
 
 /**
- * Regressão de segurança: XSS armazenado via HTML de template.
- *
- * O conteúdo do template é escrito por usuários do cliente e guardado cru pelo backend.
- * O editor visual injeta esse HTML com `innerHTML` direto — caminho que NÃO passa pelo
- * sanitizador do Angular. Sem `sanitizeEmailHtml()`, um usuário comum salva um payload
- * e ele executa na sessão de quem abrir o template (um admin, cujo JWT está no
- * localStorage). Estes testes falham se a sanitização for removida.
+ * Regressão de XSS armazenado: o editor usa `innerHTML` direto, fora do sanitizador do
+ * Angular. Estes testes falham se `sanitizeEmailHtml()` for removida.
  */
 
 /** Payloads que executam via innerHTML — `<script>` não executa por essa via, estes sim. */
@@ -43,7 +38,6 @@ test.describe('Templates — sanitização do editor', () => {
     // O conteúdo legítimo continua lá — sanitizar não é apagar tudo.
     await expect(editor).toContainText('Conteúdo normal');
 
-    // Nenhum dos handlers disparou.
     const executou = await page.evaluate(() => ({
       img: (window as unknown as Record<string, unknown>)['__xss_img'] ?? false,
       svg: (window as unknown as Record<string, unknown>)['__xss_svg'] ?? false,
@@ -51,7 +45,6 @@ test.describe('Templates — sanitização do editor', () => {
     }));
     expect(executou).toEqual({ img: false, svg: false, frame: false });
 
-    // E os vetores sumiram do DOM, não apenas deixaram de disparar.
     const html = await editor.innerHTML();
     expect(html).not.toContain('onerror');
     expect(html).not.toContain('onbegin');
@@ -75,7 +68,6 @@ test.describe('Templates — sanitização do editor', () => {
     expect(html).toContain('bgcolor');
     expect(html).toContain('align="center"');
     expect(html).toContain('style="color:#16264F;font-size:18px"');
-    // Link com target e a variável do handlebars.
     expect(html).toContain('target="_blank"');
     expect(html).toContain('{{name}}');
   });
@@ -88,8 +80,7 @@ test.describe('Templates — sanitização do editor', () => {
     await page.goto('/templates');
     await page.getByRole('button', { name: 'editar' }).click();
 
-    // O DOMPurify descarta comentário com marcação dentro (proteção contra mXSS) —
-    // desligar isso abriria vetor real, então a perda é aceita e comunicada.
+    // O DOMPurify descarta comentário com marcação (proteção contra mXSS); perda aceita.
     const html = await page.getByRole('textbox', { name: 'Conteúdo do email' }).innerHTML();
     expect(html).not.toContain('[if mso]');
     await expect(page.getByText(/trechos condicionais do Outlook/i)).toBeVisible();
@@ -119,9 +110,89 @@ test.describe('Templates — sanitização do editor', () => {
 
     // openEdit dispara preview(); o dublê devolve o mesmo HTML que o backend renderizaria.
     await expect(page.getByText('Prévia (com dados de exemplo)')).toBeVisible();
-    await expect(page.locator('.preview')).toContainText('Oi');
+    const previa = page.frameLocator('iframe.preview');
+    await expect(previa.locator('body')).toContainText('Oi');
 
     expect(await page.evaluate(() => (window as unknown as Record<string, unknown>)['__xss_img'] ?? false)).toBe(false);
-    expect(await page.locator('.preview').innerHTML()).not.toContain('onerror');
+    expect(await previa.locator('body').innerHTML()).not.toContain('onerror');
+    // Defesa independente do DOMPurify: o iframe não pode ter permissão nenhuma.
+    await expect(page.locator('iframe.preview')).toHaveAttribute('sandbox', '');
+  });
+
+  test('email completo aparece na prévia com o CSS do <head>', async ({ page }) => {
+    // O estilo vem no <head>, que se perderia numa <div> com [innerHTML].
+    const documento =
+      '<!DOCTYPE html><html><head><style>.titulo{color:rgb(255, 0, 0)}</style></head>' +
+      '<body><h1 class="titulo">Promoção</h1></body></html>';
+    const api = new ApiMock({ templates: [makeTemplate({ name: 'Newsletter', html: documento })] });
+    await api.install(page);
+    await seedSession(page, ADMIN);
+
+    await page.goto('/templates');
+    await page.getByRole('button', { name: 'editar' }).click();
+
+    const titulo = page.frameLocator('iframe.preview').locator('h1.titulo');
+    await expect(titulo).toHaveText('Promoção');
+    await expect(titulo).toHaveCSS('color', 'rgb(255, 0, 0)');
+  });
+
+  test('email completo abre no HTML avançado, com uma prévia só', async ({ page }) => {
+    const documento =
+      '<!DOCTYPE html><html><head><style>h1{color:#0a5}</style></head><body><h1>Newsletter</h1></body></html>';
+    const api = new ApiMock({ templates: [makeTemplate({ name: 'Newsletter', html: documento })] });
+    await api.install(page);
+    await seedSession(page, ADMIN);
+
+    await page.goto('/templates');
+    await page.getByRole('button', { name: 'editar' }).click();
+
+    await expect(page.getByRole('textbox', { name: 'HTML do email' })).toHaveValue(documento);
+    await expect(page.getByRole('textbox', { name: 'Conteúdo do email' })).toHaveCount(0);
+    await expect(page.locator('iframe.preview')).toHaveCount(1);
+
+    await page.getByRole('button', { name: /Editor visual/ }).click();
+    // O diálogo de confirmação abre por cima do modal do editor, que também tem "Cancelar".
+    await page.getByRole('button', { name: 'Cancelar' }).last().click();
+    await expect(page.getByRole('textbox', { name: 'HTML do email' })).toBeVisible();
+
+    await page.getByRole('button', { name: /Editor visual/ }).click();
+    await page.getByRole('button', { name: 'Abrir mesmo assim' }).click();
+    await expect(page.getByRole('textbox', { name: 'Conteúdo do email' })).toBeVisible();
+  });
+
+  test('template simples continua abrindo no editor visual', async ({ page }) => {
+    const api = new ApiMock({ templates: [makeTemplate({ name: 'Aviso', html: '<p>Oi {{name}}</p>' })] });
+    await api.install(page);
+    await seedSession(page, ADMIN);
+
+    await page.goto('/templates');
+    await page.getByRole('button', { name: 'editar' }).click();
+
+    await expect(page.getByRole('textbox', { name: 'Conteúdo do email' })).toContainText('Oi {{name}}');
+    await page.getByRole('button', { name: /HTML avançado/ }).click();
+    await page.getByRole('button', { name: /Editor visual/ }).click();
+    await expect(page.getByRole('textbox', { name: 'Conteúdo do email' })).toBeVisible();
+  });
+
+  test('colar um email em HTML no editor visual abre o modo avançado, sem virar texto', async ({ page }) => {
+    // Colado como texto puro, o contenteditable guardaria o HTML escapado.
+    const api = new ApiMock({ templates: [makeTemplate({ name: 'Newsletter', html: '<p>Oi</p>' })] });
+    await api.install(page);
+    await seedSession(page, ADMIN);
+
+    await page.goto('/templates');
+    await page.getByRole('button', { name: 'editar' }).click();
+
+    const colado = '<!DOCTYPE html><html><head><style>p{margin:0}</style></head><body><p>Colado</p></body></html>';
+    await page.getByRole('textbox', { name: 'Conteúdo do email' }).evaluate((el, texto) => {
+      const dados = new DataTransfer();
+      dados.setData('text/plain', texto);
+      el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dados, bubbles: true, cancelable: true }));
+    }, colado);
+
+    const codigo = page.getByRole('textbox', { name: 'HTML do email' });
+    await expect(codigo).toBeVisible();
+    await expect(codigo).toHaveValue(colado);
+    await expect(codigo).not.toHaveValue(/&lt;/);
   });
 });

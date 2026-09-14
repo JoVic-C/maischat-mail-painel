@@ -52,8 +52,7 @@
   <div class="rel-head">
     <h3 class="rel-titulo">Relatório de envios</h3>
 
-    <!-- Atalhos de período. Cada um já escolhe o agrupamento que cabe na janela:
-         um ano por dia daria 365 barras ilegíveis. -->
+    <!-- Cada atalho escolhe o agrupamento: um ano por dia daria 365 barras ilegíveis. -->
     <div class="periodos" role="group" aria-label="Período do relatório">
       <button
         type="button"
@@ -92,8 +91,7 @@
     (retry)="carregarEnvios()"
   >
     <ng-container *ngIf="relatorio">
-      <!-- Totais do período. Grid de largura fixa para não deixar um número órfão
-           numa segunda linha quando a janela aperta. -->
+      <!-- Grid de largura fixa: evita um número órfão numa segunda linha. -->
       <div class="rel-totais">
         <div class="rel-total">
           <b style="color:var(--o)">{{ relatorio.totais.enviados | number }}</b>
@@ -121,8 +119,7 @@
         </div>
       </div>
 
-      <!-- Gráfico. A escala vertical fica explícita: sem o eixo, uma barra alta não
-           diz se são 10 ou 10 mil emails. -->
+      <!-- Sem o eixo, uma barra alta não diz se são 10 ou 10 mil emails. -->
       <div class="chart-wrap">
         <div class="chart-y" aria-hidden="true">
           <span *ngFor="let m of marcasEixoY">{{ m | number }}</span>

@@ -3,7 +3,6 @@ import { Component, HostBinding, Input } from '@angular/core';
 export type ButtonVariant = 'primary' | 'outline' | 'success' | 'danger' | 'ghost' | 'link';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
-/** Botão padrão do mMail — encapsula as classes .btn do design system. */
 @Component({
     selector: 'app-button',
     templateUrl: './button.component.html',

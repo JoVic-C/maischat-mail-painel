@@ -5,13 +5,7 @@ import { ApiService } from '../../services/api.service';
 import { apiErrorMessage, ServerErrorsHandler } from '../../shared/server-errors/server-errors';
 import { ToastService } from '../../shared/toast/toast.service';
 
-/**
- * Motor de envio da plataforma.
- *
- * Diferente das outras telas, o que se edita aqui não pertence a um cliente: vale para
- * todos. Por isso a tela é do superadmin e mostra o impacto de cada campo — quem mexe
- * precisa entender que está mexendo no envio de todo mundo.
- */
+/** Os ajustes valem para todos os clientes, por isso a tela é do superadmin. */
 @Component({
   selector: 'app-platform',
   templateUrl: './platform.component.html',
@@ -93,7 +87,6 @@ export class PlatformComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Estimativa por hora, para o número por minuto ganhar significado prático. */
   get perHour(): number {
     return Number(this.form.value.ratePerMinute || 0) * 60;
   }

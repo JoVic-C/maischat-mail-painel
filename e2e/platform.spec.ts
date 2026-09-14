@@ -1,13 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { ADMIN, ApiMock, DEFAULT_PLATFORM_SETTINGS, OPERATOR, SUPERADMIN, seedSession } from './fixtures/api-mock';
 
-/**
- * Motor de envio — configuração da PLATAFORMA.
- *
- * O que precisa ficar travado aqui é o escopo: estes números valem para todos os
- * clientes, então quem não é superadmin não pode chegar na tela nem na rota. O resto
- * cobre a faixa aceita, que existe porque um valor absurdo derruba o envio de todo mundo.
- */
+/** Motor de envio: vale para todos os clientes, então só o superadmin chega à tela. */
 
 /** O superadmin opera dentro de um cliente escolhido; sem isso o tenantGuard desvia. */
 async function seedSuperadmin(page: import('@playwright/test').Page): Promise<void> {
@@ -64,8 +58,7 @@ test.describe('Motor de envio — acesso', () => {
   });
 
   test('e o superadmin alcança a tela pelo menu da plataforma', async ({ page }) => {
-    // A metade positiva importa tanto quanto a negativa: sem ela, este arquivo
-    // continuaria verde mesmo que o caminho sumisse para TODO mundo.
+    // Sem o caso positivo, o teste passaria mesmo com a rota sumida para todos.
     const api = new ApiMock({ user: SUPERADMIN });
     await api.install(page);
     await seedSuperadmin(page);

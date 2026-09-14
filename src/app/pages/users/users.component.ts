@@ -40,7 +40,6 @@ export class UsersComponent implements OnInit, OnDestroy {
     password: 'A senha deve ter ao menos 8 caracteres.',
   };
 
-  /** Texto de erro do campo (servidor ou validação local). */
   fieldError(field: string): string {
     return this.serverErrors.messageFor(field, this.LOCAL_ERRORS);
   }
@@ -98,8 +97,7 @@ export class UsersComponent implements OnInit, OnDestroy {
     this.formError = '';
     this.serverErrors.clear();
     this.form.reset({ email: '', name: '', password: '', role: 'user', isActive: true });
-    // Senha obrigatória só na criação — na edição, vazio significa "manter a atual".
-    // Sem senha o usuário nasce com convite pendente e define a própria — é o padrão.
+    // Sem senha o usuário nasce com convite pendente; na edição, vazio mantém a atual.
     this.form.controls['password'].setValidators([Validators.minLength(8)]);
     this.form.controls['password'].updateValueAndValidity();
     this.form.controls['role'].enable();
@@ -131,15 +129,11 @@ export class UsersComponent implements OnInit, OnDestroy {
     this.modal = true;
   }
 
-  /** Convite recém-gerado, exibido para o admin poder repassar o link. */
   invite: InviteLink | null = null;
   inviteFor = '';
   linkCopied = false;
 
-  /**
-   * Gera um link de redefinição de senha (suporte a quem não recebe o email).
-   * Quem gera não fica sabendo a senha — o dono do link é que a define.
-   */
+  /** Quem gera não fica sabendo a senha — o dono do link é que a define. */
   gerarLinkSenha(user: ManagedUser): void {
     this.api.userResetLink(user.id).subscribe({
       next: (res) => {
@@ -151,7 +145,7 @@ export class UsersComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Reenvia o convite de quem ainda não definiu a senha (invalida o link anterior). */
+  /** Invalida o link anterior. */
   resendInvite(user: ManagedUser): void {
     this.api.resendInvite(user.id).subscribe({
       next: (res) => {
@@ -162,7 +156,6 @@ export class UsersComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Distingue os dois tipos de link no painel — o texto e o aviso mudam. */
   inviteKind: 'invite' | 'reset' = 'invite';
 
   private showInvite(invite: InviteLink, email: string): void {
@@ -172,7 +165,6 @@ export class UsersComponent implements OnInit, OnDestroy {
     this.linkCopied = false;
   }
 
-  /** Copia o link para a área de transferência, com retorno visual. */
   async copyInviteLink(): Promise<void> {
     if (!this.invite) return;
     try {

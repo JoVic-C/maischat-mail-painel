@@ -1,7 +1,6 @@
 import { AfterViewChecked, Component, ElementRef, HostListener, ViewChild } from '@angular/core';
 import { PromptService } from './prompt.service';
 
-/** Renderiza o modal de entrada de texto global (montado uma vez no app.component). */
 @Component({
     selector: 'app-prompt',
     templateUrl: './prompt.component.html',
@@ -13,7 +12,7 @@ export class PromptComponent implements AfterViewChecked {
 
   constructor(public svc: PromptService) {}
 
-  /** Foca o campo assim que o modal aparece (e rearma quando ele fecha). */
+  /** Rearma o foco quando o modal fecha. */
   ngAfterViewChecked(): void {
     if (this.svc.state && this.inputRef && !this.focused) {
       this.inputRef.nativeElement.focus();

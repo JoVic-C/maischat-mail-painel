@@ -31,8 +31,6 @@
 .modal.size-md { max-width: 480px; }
 .modal.size-lg { max-width: 640px; }
 .modal.size-xl { max-width: 820px; }
-
-/* ── Cabeçalho ── */
 .modal-head {
   display: flex;
   align-items: center;
@@ -58,9 +56,5 @@
 }
 .modal-head .x:hover:not(:disabled) { color: var(--t); background: rgba(0, 0, 0, 0.04); }
 .modal-head .x:disabled { opacity: 0.4; cursor: not-allowed; }
-
-/* ── Corpo ── */
 .modal-body { padding: 18px 22px; display: flex; flex-direction: column; gap: 14px; }
-
-/* ── Ações ── */
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 8px 22px 20px; flex-wrap: wrap; }

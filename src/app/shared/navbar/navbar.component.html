@@ -20,8 +20,6 @@
          o símbolo sozinho identifica a marca e devolve a largura para eles. -->
     <app-logo [variant]="compacto ? 'mark' : 'full'" size="21px" markColor="brand"></app-logo>
   </a>
-
-  <!-- Barra larga: o trabalho do dia a dia fica à vista; o resto, em agrupamentos. -->
   <div class="nav-links" #links *ngIf="!compacto">
     <ng-container *ngIf="auth.hasTenantContext">
       <a routerLink="/dashboard" routerLinkActive="active">dashboard</a>
@@ -37,9 +35,10 @@
         tone="nav"
         triggerText="ajustes"
         label="Ajustes do cliente"
-        [active]="emGrupo(['/smtp', '/equipe'])"
+        [active]="emGrupo(['/smtp', '/dominios', '/equipe'])"
       >
         <a class="menu-item" routerLink="/smtp" routerLinkActive="active">SMTP</a>
+        <a class="menu-item" routerLink="/dominios" routerLinkActive="active">Domínios</a>
         <a class="menu-item" routerLink="/equipe" routerLinkActive="active">Equipe</a>
       </app-row-menu>
     </ng-container>
@@ -67,9 +66,6 @@
         ✕
       </button>
     </span>
-
-    <!-- Conta e saída num agrupamento só: eram dois alvos disputando a ponta da barra,
-         logo ao lado do chip do cliente, que é o item mais largo dela. -->
     <app-row-menu
       *ngIf="auth.currentUser"
       tone="nav"
@@ -83,8 +79,7 @@
     </app-row-menu>
   </div>
 
-  <!-- Tela estreita: um painel com tudo, em seções. Substitui a rolagem horizontal,
-       que escondia itens sem dar nenhum sinal de que havia mais coisa. -->
+  <!-- Tela estreita: painel com tudo, no lugar de uma rolagem horizontal que escondia itens. -->
   <div class="nav-painel" id="nav-painel" *ngIf="compacto && menuAberto">
     <ng-container *ngIf="auth.hasTenantContext">
       <a routerLink="/dashboard" routerLinkActive="active">dashboard</a>
@@ -97,6 +92,7 @@
       <ng-container *ngIf="auth.isAdmin">
         <p class="np-secao">Ajustes</p>
         <a routerLink="/smtp" routerLinkActive="active">SMTP</a>
+        <a routerLink="/dominios" routerLinkActive="active">Domínios</a>
         <a routerLink="/equipe" routerLinkActive="active">Equipe</a>
       </ng-container>
     </ng-container>
@@ -110,6 +106,5 @@
   </div>
 </nav>
 
-<!-- Fundo do painel recolhido: fecha ao tocar fora e escurece a página, deixando claro
-     que a navegação está por cima do conteúdo. -->
+<!-- Fundo do painel: fecha ao tocar fora e deixa claro que a navegação está por cima. -->
 <div class="nav-fundo" *ngIf="compacto && menuAberto" (click)="fecharMenu()" aria-hidden="true"></div>

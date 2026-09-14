@@ -6,7 +6,6 @@ import { ConfirmService } from '../../shared/confirm/confirm.service';
 import { ServerErrorsHandler } from '../../shared/server-errors/server-errors';
 import { ToastService } from '../../shared/toast/toast.service';
 
-/** Confirmação precisa bater com a nova senha. */
 function passwordsMatch(group: AbstractControl): ValidationErrors | null {
   const novo = group.get('newPassword')?.value;
   const confirma = group.get('confirmPassword')?.value;
@@ -38,7 +37,6 @@ export class AccountComponent implements OnDestroy {
     newPassword: 'A nova senha deve ter ao menos 8 caracteres.',
   };
 
-  /** Texto de erro do campo (servidor ou validação local). */
   fieldError(field: string): string {
     return this.serverErrors.messageFor(field, this.LOCAL_ERRORS);
   }

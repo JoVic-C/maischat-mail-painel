@@ -12,8 +12,7 @@
   (click)="toggle()"
 >
   <ng-container *ngIf="triggerText; else pontos">
-    <!-- O texto vai num elemento próprio para poder ser cortado com reticências sem
-         levar a seta junto; um nome longo transbordava sobre os vizinhos. -->
+    <!-- Elemento próprio: corta o texto com reticências sem levar a seta junto. -->
     <span class="rm-texto">{{ triggerText }}</span>
     <span class="rm-seta" aria-hidden="true"></span>
   </ng-container>

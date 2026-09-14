@@ -1,9 +1,5 @@
 import { Component, Input } from '@angular/core';
 
-/**
- * Cabeçalho de página: título + subtítulo opcional.
- * `<app-page-title subtitle="...">Contatos</app-page-title>`
- */
 @Component({
     selector: 'app-page-title',
     template: `

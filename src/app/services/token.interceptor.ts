@@ -3,10 +3,6 @@ import { Injectable } from '@angular/core';
 import { Observable, catchError, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
 
-/**
- * Anexa o JWT (e, para o superadmin, o cliente em operação) em toda requisição
- * do HttpClient. Em 401 — token inválido, expirado ou revogado — desloga.
- */
 @Injectable()
 export class TokenInterceptor implements HttpInterceptor {
   constructor(private auth: AuthService) {}
@@ -25,7 +21,7 @@ export class TokenInterceptor implements HttpInterceptor {
 
     return next.handle(authReq).pipe(
       catchError((err: HttpErrorResponse) => {
-        if (err.status === 401) this.auth.logout(); // token inválido/expirado → volta pro login
+        if (err.status === 401) this.auth.logout();
         return throwError(() => err);
       })
     );

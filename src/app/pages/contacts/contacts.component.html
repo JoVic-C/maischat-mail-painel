@@ -33,8 +33,6 @@
     <option value="undeliverable">🚫 Não-entregáveis</option>
   </select>
 </div>
-
-<!-- Barra de ação em lote: aparece quando há seleção -->
 <div class="bulk-bar" *ngIf="selectedIds.size">
   <span>
     <b>{{ selectedIds.size }}</b> contato(s) selecionado(s)
@@ -107,8 +105,6 @@
     <app-paginator [page]="page" [total]="total" [limit]="limit" (pageChange)="goToPage($event)"></app-paginator>
   </app-data-state>
 </div>
-
-<!-- Novo/editar contato -->
 <app-modal
   *ngIf="modal"
   [title]="editingId ? 'Editar contato' : 'Novo contato'"
@@ -148,10 +144,15 @@
 
     <div class="ff">
       <label for="ct-lists">Listas</label>
-      <select id="ct-lists" multiple formControlName="lists" class="multi">
-        <option *ngFor="let l of lists" [value]="l._id">{{ l.name }}</option>
-      </select>
-      <p class="hint sub">Segure Ctrl para selecionar várias</p>
+      <app-multi-select
+        inputId="ct-lists"
+        formControlName="lists"
+        [options]="listOptions"
+        placeholder="Nenhuma lista"
+        searchPlaceholder="Buscar lista"
+        emptyText="Nenhuma lista encontrada."
+        ariaLabel="Listas do contato"
+      ></app-multi-select>
     </div>
   </form>
 
@@ -160,8 +161,6 @@
     <app-button variant="primary" [loading]="saving" (click)="save()">Salvar</app-button>
   </ng-container>
 </app-modal>
-
-<!-- Importação de contatos, CSV ou Excel (widget compartilhado) -->
 <app-modal
   *ngIf="importModal"
   title="Importar e higienizar contatos"

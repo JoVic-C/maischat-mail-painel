@@ -63,8 +63,6 @@
     </div>
   </app-data-state>
 </div>
-
-<!-- Confirmação de exclusão -->
 <app-modal
   *ngIf="deleteTarget"
   title="Excluir lista"
@@ -87,8 +85,6 @@
     <app-button variant="danger" [loading]="deleting" (click)="confirmDelete()">Excluir lista</app-button>
   </ng-container>
 </app-modal>
-
-<!-- Criar (wizard de 2 passos) / editar -->
 <app-modal
   *ngIf="modal"
   [title]="wizardStep === 2 ? 'Adicionar contatos' : editingId ? 'Editar lista' : 'Nova lista'"
@@ -96,9 +92,7 @@
   [busy]="saving"
   [dismissOnBackdrop]="wizardStep === 1"
   (close)="closeWizard()"
->
-  <!-- Passo 1: dados da lista -->
-  <form [formGroup]="form" *ngIf="wizardStep === 1" (ngSubmit)="submit()">
+>  <form [formGroup]="form" *ngIf="wizardStep === 1" (ngSubmit)="submit()">
     <p class="error-msg" *ngIf="formError">{{ formError }}</p>
 
     <div class="ff">
@@ -125,8 +119,6 @@
       </select>
     </div>
   </form>
-
-  <!-- Passo 2: importar contatos (só na criação) -->
   <div *ngIf="wizardStep === 2 && createdList">
     <p class="hint">
       ✅ Lista <b>"{{ createdList.name }}"</b> criada! Importe contatos agora (opcional) ou clique em <b>Pular</b> para

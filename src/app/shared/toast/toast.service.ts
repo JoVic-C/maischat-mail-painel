@@ -34,7 +34,6 @@ export class ToastService {
     return this.push({ kind: 'warn', message, title, durationMs });
   }
 
-  /** Atalho para erros de API: extrai a mensagem do corpo e exibe como toast de erro. */
   apiError(err: unknown, title?: string): number {
     return this.error(apiErrorMessage(err), title);
   }

@@ -3,7 +3,6 @@ import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { ToastService } from '../shared/toast/toast.service';
 
-/** Bloqueia rotas do painel para quem não está logado. */
 export const authGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
@@ -12,11 +11,7 @@ export const authGuard: CanActivateFn = () => {
   return false;
 };
 
-/**
- * Rotas do painel exigem um cliente em contexto: o backend escopa toda query por
- * tenant. Admin/usuário já têm o seu; o superadmin precisa escolher em /clientes,
- * senão a API responderia 400 em todas as telas.
- */
+/** O backend escopa toda query por tenant: sem cliente escolhido, a API responderia 400. */
 export const tenantGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
@@ -33,7 +28,6 @@ export const tenantGuard: CanActivateFn = () => {
   return false;
 };
 
-/** Telas de administração do cliente (SMTP, equipe, bounces). */
 export const adminGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
@@ -56,7 +50,6 @@ export const adminGuard: CanActivateFn = () => {
   return true;
 };
 
-/** Administração da plataforma — só superadmin. */
 export const superadminGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);

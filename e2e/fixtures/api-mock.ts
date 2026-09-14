@@ -10,6 +10,8 @@ import type {
   SendLog,
   SendStatus,
   Segment,
+  SendingDomain,
+  SendingDomainsOverview,
   SmtpServer,
   Template,
   TenantSummary,
@@ -44,11 +46,7 @@ export const SUPERADMIN: AuthUser = {
   tenantId: null,
 };
 
-/**
- * O dublê responde de outra origem (:3000) para a página (:4200), então cada resposta
- * precisa dos cabeçalhos de CORS — incluindo o expose, senão o Angular não consegue
- * ler o X-Total-Count da paginação de envios.
- */
+/** Origem diferente da página: CORS com expose, senão o Angular não lê o X-Total-Count. */
 const CORS_HEADERS: Record<string, string> = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
@@ -57,8 +55,6 @@ const CORS_HEADERS: Record<string, string> = {
 };
 
 const ISO = '2026-08-20T12:00:00.000Z';
-
-// ─── Fábricas ───
 
 export function makeCampaign(over: Partial<Campaign> & { name: string }): Campaign {
   return {
@@ -170,14 +166,12 @@ export interface MockSeed {
   tenants?: TenantSummary[];
   contacts?: { _id: string; email: string; name?: string }[];
   importStates?: Record<string, unknown>[];
+  sendingDomains?: SendingDomainsOverview;
+  /** Resposta da verificação por domínio; sem entrada, devolve o domínio como está. */
+  verifiedDomains?: Record<string, SendingDomain>;
 }
 
-/**
- * Dublê da API do mMail para os testes de interface.
- *
- * Mantém estado em memória (criar campanha realmente aparece na listagem seguinte),
- * grava as chamadas recebidas para asserção e permite forçar falhas por rota.
- */
+/** Dublê da API com estado em memória, registro de chamadas e falhas forçadas por rota. */
 export class ApiMock {
   user: AuthUser;
   campaigns: Campaign[];
@@ -188,19 +182,16 @@ export class ApiMock {
   logs: SendLog[];
   tenants: TenantSummary[];
   platformSettings: PlatformSettings;
+  sendingDomains: SendingDomainsOverview;
+  verifiedDomains: Record<string, SendingDomain>;
 
-  /**
-   * Fila de respostas do job de importação, consumida a cada consulta de progresso.
-   * A tela pergunta em intervalo curto; devolver uma sequência é o que permite testar
-   * a transição validando → validado → importando → concluído sem cronômetro no teste.
-   */
+  /** Fila de estados do job, consumida a cada consulta: testa a transição sem cronômetro. */
   importStates: Record<string, unknown>[] = [];
   contacts: { _id: string; email: string; name?: string }[] = [];
 
   /** Falhas forçadas, por apelido de rota (ex.: 'login', 'campaigns', 'saveCampaign'). */
   readonly failures = new Map<string, ApiFailure>();
 
-  /** Toda requisição que chegou ao dublê, na ordem. */
   readonly calls: RecordedCall[] = [];
 
   constructor(seed: MockSeed = {}) {
@@ -215,9 +206,10 @@ export class ApiMock {
     this.contacts = seed.contacts ?? [];
     this.importStates = seed.importStates ?? [];
     this.platformSettings = seed.platformSettings ?? { ...DEFAULT_PLATFORM_SETTINGS };
+    this.sendingDomains = seed.sendingDomains ?? { enforced: true, platformHosts: ['mail.maismail.com.br'], domains: [] };
+    this.verifiedDomains = seed.verifiedDomains ?? {};
   }
 
-  /** Faz a rota falhar com o status e corpo informados. */
   fail(routeAlias: string, status: number, body: unknown): void {
     this.failures.set(routeAlias, { status, body });
   }
@@ -233,8 +225,6 @@ export class ApiMock {
   async install(page: Page): Promise<void> {
     await page.route(`${API_ORIGIN}/api/**`, (route) => this.handle(route));
   }
-
-  // ─── Roteamento ───
 
   private async handle(route: Route): Promise<void> {
     const request = route.request();
@@ -268,7 +258,6 @@ export class ApiMock {
     body: Record<string, unknown>,
     query: Record<string, string>
   ): Promise<void> {
-    // ─── Autenticação ───
     if (method === 'POST' && path === '/auth/login') {
       if (await this.rejectIfFailing(route, 'login')) return;
       return this.json(route, { token: TEST_TOKEN, user: this.user });
@@ -278,7 +267,6 @@ export class ApiMock {
       return this.json(route, this.user);
     }
 
-    // ─── Contatos e importação em massa ───
     if (method === 'GET' && path === '/contacts') {
       if (await this.rejectIfFailing(route, 'contacts')) return;
       return this.json(route, { contacts: this.contacts, total: this.contacts.length, page: 1, limit: 50 });
@@ -300,7 +288,6 @@ export class ApiMock {
       return this.json(route, { message: 'Importação iniciada.', id: 'job-1', status: 'importing' }, 202);
     }
 
-    // ─── Dashboard ───
     if (method === 'GET' && path === '/dashboard/stats') {
       if (await this.rejectIfFailing(route, 'dashboardStats')) return;
       return this.json(route, this.dashboardStats());
@@ -317,7 +304,6 @@ export class ApiMock {
       } satisfies RelatorioEnvios);
     }
 
-    // ─── Apoios do formulário ───
     if (method === 'GET' && path === '/templates') return this.json(route, this.templates);
     if (method === 'POST' && path === '/templates/preview') {
       // O backend devolve o template renderizado — inclusive o que o usuário escreveu.
@@ -328,7 +314,22 @@ export class ApiMock {
     if (method === 'GET' && path === '/smtp') return this.json(route, this.smtps);
     if (method === 'GET' && path === '/tenants') return this.json(route, this.tenants);
 
-    // ─── Motor de envio (plataforma) ───
+    if (method === 'GET' && path === '/sending-domains') {
+      if (await this.rejectIfFailing(route, 'sendingDomains')) return;
+      return this.json(route, this.sendingDomains);
+    }
+    const verifyMatch = path.match(/^\/sending-domains\/([^/]+)\/verify$/);
+    if (method === 'POST' && verifyMatch) {
+      if (await this.rejectIfFailing(route, 'verifySendingDomain')) return;
+      const name = decodeURIComponent(verifyMatch[1]);
+      const current = this.sendingDomains.domains.find((d) => d.domain === name);
+      if (!current) return this.error(route, 404, 'Nenhum servidor SMTP deste cliente envia por esse domínio.');
+      const domain = this.verifiedDomains[name] ?? current;
+      this.sendingDomains.domains = this.sendingDomains.domains.map((d) => (d.domain === name ? domain : d));
+      const message = domain.status === 'verified' ? 'Domínio liberado para envio.' : 'O domínio ainda tem pendências.';
+      return this.json(route, { message, domain });
+    }
+
     if (method === 'GET' && path === '/platform-settings') {
       if (await this.rejectIfFailing(route, 'platformSettings')) return;
       return this.json(route, this.platformSettings);
@@ -348,7 +349,6 @@ export class ApiMock {
       });
     }
 
-    // ─── Campanhas ───
     if (method === 'GET' && path === '/campaigns') {
       if (await this.rejectIfFailing(route, 'campaigns')) return;
       return this.json(route, this.campaigns);
@@ -386,8 +386,6 @@ export class ApiMock {
     // Rota não dublada: falha alto em vez de devolver algo silenciosamente errado.
     return this.error(route, 501, `Rota não dublada no ApiMock: ${method} ${path}`);
   }
-
-  // ─── Regras ───
 
   private saveCampaign(body: Record<string, unknown>): { message: string; campaign: Campaign } {
     const id = body['id'] as string | undefined;
@@ -458,8 +456,6 @@ export class ApiMock {
     };
   }
 
-  // ─── Respostas ───
-
   private async sendLogs(route: Route, query: Record<string, string>): Promise<void> {
     const status = query['status'] ?? '';
     const filtered = status ? this.logs.filter((l) => l.status === status) : this.logs;
@@ -505,11 +501,7 @@ export class ApiMock {
   }
 }
 
-/**
- * Entra no painel sem passar pela tela de login — as chaves são as mesmas que o
- * AuthService grava (ver services/auth.service.ts). Use nos testes cujo alvo não é
- * o login em si; o fluxo real de login é coberto em login.spec.ts.
- */
+/** Entra sem a tela de login; as chaves são as mesmas que o AuthService grava. */
 export async function seedSession(page: Page, user: AuthUser = ADMIN): Promise<void> {
   await page.addInitScript(
     ([token, serializedUser, tenantId]) => {

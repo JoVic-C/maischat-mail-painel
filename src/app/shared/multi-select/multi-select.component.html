@@ -1,0 +1,73 @@
+<div class="ms" [class.open]="open" [class.invalid]="invalid" [class.disabled]="disabled">
+  <div class="ms-field">
+    <button
+      #trigger
+      type="button"
+      class="ms-trigger"
+      [id]="inputId"
+      [disabled]="disabled"
+      aria-haspopup="listbox"
+      [attr.aria-expanded]="open"
+      [attr.aria-controls]="listId"
+      (click)="toggleOpen()"
+      (keydown)="onTriggerKeydown($event)"
+    >
+      <span class="ms-summary" [class.placeholder]="!chosen.length">{{ summary }}</span>
+      <span class="ms-caret" aria-hidden="true"></span>
+    </button>
+
+    <div class="ms-panel" *ngIf="open" (keydown)="onPanelKeydown($event)">
+      <input
+        *ngIf="showSearch"
+        class="ms-search"
+        type="search"
+        autocomplete="off"
+        [value]="query"
+        [placeholder]="searchPlaceholder"
+        [attr.aria-label]="searchPlaceholder"
+        [attr.aria-controls]="listId"
+        [attr.aria-activedescendant]="active >= 0 ? optionId(active) : null"
+        (input)="onQuery($any($event.target).value)"
+      />
+
+      <div class="ms-bulk" *ngIf="filtered.length > 1">
+        <button type="button" (click)="selectAll()">{{ query ? 'selecionar resultados' : 'selecionar todas' }}</button>
+        <button type="button" (click)="clear()" [disabled]="!selected.size">limpar</button>
+      </div>
+
+      <ul
+        class="ms-list"
+        role="listbox"
+        tabindex="-1"
+        aria-multiselectable="true"
+        [id]="listId"
+        [attr.aria-label]="ariaLabel || null"
+        [attr.aria-activedescendant]="active >= 0 && filtered.length ? optionId(active) : null"
+      >
+        <li
+          *ngFor="let o of filtered; let i = index; trackBy: trackByValue"
+          role="option"
+          [id]="optionId(i)"
+          [attr.aria-selected]="selected.has(o.value)"
+          [class.active]="i === active"
+          [class.checked]="selected.has(o.value)"
+          (mousedown)="$event.preventDefault()"
+          (mouseenter)="active = i"
+          (click)="active = i; toggle(o)"
+        >
+          <span class="ms-check" aria-hidden="true"></span>
+          <span class="ms-label">{{ o.label }}</span>
+          <span class="ms-meta" *ngIf="o.meta">{{ o.meta }}</span>
+        </li>
+      </ul>
+      <p class="ms-empty" *ngIf="!filtered.length">{{ emptyText }}</p>
+    </div>
+  </div>
+
+  <div class="ms-chips" *ngIf="chosen.length">
+    <span class="ms-chip" *ngFor="let o of chosen; trackBy: trackByValue">
+      {{ o.label }}
+      <button type="button" (click)="remove(o)" [disabled]="disabled" [attr.aria-label]="'Remover ' + o.label">×</button>
+    </span>
+  </div>
+</div>

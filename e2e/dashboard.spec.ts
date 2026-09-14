@@ -2,15 +2,6 @@ import { expect, test } from '@playwright/test';
 import { ADMIN, ApiMock, seedSession } from './fixtures/api-mock';
 import type { Page } from '@playwright/test';
 
-/**
- * Relatório de envios do dashboard.
- *
- * O valor da tela está no recorte: o operador escolhe o período e o agrupamento, e o
- * que ele escolheu tem que chegar à API. O resto cobre a leitura do gráfico — baldes
- * sem envio precisam aparecer, senão dois meses distantes viram barras vizinhas e o
- * intervalo parado some.
- */
-
 interface Balde {
   inicio: string;
   enviados: number;
@@ -21,10 +12,7 @@ function inicio(dia: string): string {
   return new Date(`${dia}T00:00:00-03:00`).toISOString();
 }
 
-/**
- * Intercepta o relatório, guarda as URLs pedidas e responde a série informada.
- * Registrada depois do ApiMock, tem precedência sobre o handler genérico.
- */
+/** Registrada depois do ApiMock, tem precedência sobre o handler genérico. */
 async function interceptarRelatorio(page: Page, serie: Balde[] = []): Promise<string[]> {
   const pedidos: string[] = [];
 
@@ -122,15 +110,13 @@ test.describe('Relatório de envios — filtros', () => {
     expect(params.get('de')).toContain('2026-05-01');
     expect(params.get('ate')).toContain('2026-05-31');
 
-    // Nenhum atalho fica marcado quando o período é livre.
     await expect(page.locator('.periodo.ativo')).toHaveCount(0);
   });
 });
 
 test.describe('Relatório de envios — leitura do gráfico', () => {
   test('meses sem envio aparecem no gráfico, não somem', async ({ page }) => {
-    // O backend só devolve os baldes com registro. Se a tela desenhasse só esses dois,
-    // março e setembro sairiam colados e os cinco meses parados desapareceriam.
+    // O backend só devolve baldes com registro; a tela precisa preencher os vazios.
     await abrirDashboard(page, [
       { inicio: inicio('2026-03-01'), enviados: 1 },
       { inicio: inicio('2026-09-01'), enviados: 40 },
@@ -150,8 +136,7 @@ test.describe('Relatório de envios — leitura do gráfico', () => {
   });
 
   test('servidor sem a rota explica a versão, sem devolver a URL na tela', async ({ page }) => {
-    // O painel implantado à frente da API já mostrou ao usuário
-    // "Rota não encontrada: GET /api/dashboard/sends?de=...&ate=...&agrupamento=day".
+    // Painel à frente da API: o aviso não pode expor método nem rota crua.
     const api = new ApiMock({ user: ADMIN });
     await api.install(page);
     await seedSession(page, ADMIN);

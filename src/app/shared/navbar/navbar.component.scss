@@ -2,12 +2,8 @@
    consegue se ancorar nela. */
 :host { display: block; position: sticky; top: 0; z-index: 100; }
 
-/* O menu fica no centro da TELA, não no centro do espaço que sobra.
-   Antes eram três colunas de grid e o menu se centralizava na do meio — que não é
-   simétrica: o bloco do usuário mede 364px contra 61px da marca, e isso empurrava o
-   menu 152px para a esquerda, metade da diferença.
-   A simetria vem de `flex: 1 1 0` nas duas laterais: elas partem da mesma base e
-   recebem larguras iguais, então o miolo cai exatamente no meio. */
+/* Menu no centro da TELA: `flex: 1 1 0` dá larguras iguais às laterais,
+   mesmo com marca e bloco do usuário de tamanhos diferentes. */
 .navbar {
   position: relative;
   /* Acima do fundo escuro do painel, que vem depois no DOM. */
@@ -21,9 +17,8 @@
   gap: 16px;
 }
 
-/* Sem `min-width: 0` de propósito: o mínimo destes blocos é o próprio conteúdo. É o
-   que faz a barra TRANSBORDAR quando aperta, em vez de um bloco entrar por baixo do
-   outro — e é o transbordo que o componente mede para recolher a barra. */
+/* Sem `min-width: 0` de propósito: a barra transborda, e é esse transbordo
+   que o componente mede para recolher. */
 .nav-brand { flex: 1 1 0; display: flex; align-items: center; text-decoration: none; color: #fff; }
 .nav-brand:hover { opacity: 0.9; }
 
@@ -71,13 +66,10 @@
   background: rgba(255, 138, 82, 0.16); border: 1px solid rgba(255, 138, 82, 0.35);
   padding: 4px 6px 4px 10px; border-radius: 20px;
 }
-
-/* "operando em" em caixa baixa e discreto: o nome do cliente é o que importa. */
 .nav-user .t-label {
   font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
   color: rgba(255, 138, 82, 0.75);
-  /* Sem isto o rótulo quebra em duas linhas quando a barra aperta, e o chip fica com
-     o dobro da altura das outras coisas. Melhor a barra recolher do que isso. */
+  /* Sem isto o rótulo quebra em duas linhas e dobra a altura do chip. */
   white-space: nowrap;
 }
 /* O piso existe para o nome não virar "Cli…": saber EM QUAL cliente se está operando
@@ -103,8 +95,6 @@
 }
 .nav-user ::ng-deep .rm-trigger.is-nav > * { min-width: 0; }
 
-/* ─── Tela estreita ─── */
-
 .nav-burger {
   display: grid;
   gap: 4px;
@@ -124,7 +114,6 @@
 }
 .nav-burger:hover { background: rgba(255, 255, 255, 0.16); }
 .nav-burger:focus-visible { outline: 2px solid var(--om); outline-offset: 2px; }
-/* Aberto, os três traços viram um X — o mesmo botão que abriu também fecha. */
 .nav-burger.is-open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
 .nav-burger.is-open span:nth-child(2) { opacity: 0; }
 .nav-burger.is-open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
@@ -170,8 +159,7 @@
 .nav-painel > a.active { background: var(--o); color: #fff; }
 .nav-painel > a:focus-visible { outline: 2px solid var(--om); outline-offset: -2px; }
 
-/* Título de seção: é o que traz, para a tela estreita, a mesma separação de escopo que
-   os agrupamentos fazem na barra larga. */
+/* Título de seção: mesma separação de escopo dos agrupamentos da barra larga. */
 .np-secao {
   margin: 10px 12px 4px;
   color: rgba(255, 255, 255, 0.4);

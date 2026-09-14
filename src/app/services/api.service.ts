@@ -28,6 +28,8 @@ import {
   SaveListInput,
   SaveSegmentInput,
   SaveSmtpInput,
+  SendingDomain,
+  SendingDomainsOverview,
   SaveTemplateInput,
   SaveUserInput,
   Segment,
@@ -59,21 +61,16 @@ export class ApiService {
     return p;
   }
 
-  // ─── Dashboard ───
   dashboardStats(): Observable<DashboardStats> {
     return this.http.get<DashboardStats>(`${this.api}/dashboard/stats`);
   }
-  /**
-   * Relatório de envios da conta no período, com totais e série para o gráfico.
-   * Sem parâmetros, o servidor devolve os últimos 30 dias agrupados por dia.
-   */
+  /** Sem parâmetros, o servidor devolve os últimos 30 dias agrupados por dia. */
   dashboardSends(de?: string, ate?: string, agrupamento?: Agrupamento): Observable<RelatorioEnvios> {
     return this.http.get<RelatorioEnvios>(`${this.api}/dashboard/sends`, {
       params: this.params({ de, ate, agrupamento }),
     });
   }
 
-  // ─── Listas ───
   getLists(): Observable<List[]> {
     return this.http.get<List[]>(`${this.api}/lists`);
   }
@@ -87,7 +84,6 @@ export class ApiService {
     return this.http.post<ApiMessage>(`${this.api}/lists/resync-counts`, {});
   }
 
-  // ─── Contatos ───
   getContacts(query: ContactQuery = {}): Observable<ContactPage> {
     return this.http.get<ContactPage>(`${this.api}/contacts`, {
       params: this.params({
@@ -100,10 +96,6 @@ export class ApiService {
       }),
     });
   }
-  /**
-   * Exporta contatos em CSV, com os mesmos filtros da listagem.
-   * O servidor transmite o arquivo direto do banco — nada é montado aqui.
-   */
   exportContacts(query: ContactQuery = {}): Observable<Blob> {
     return this.http.get(`${this.api}/contacts/export`, {
       params: this.params({
@@ -129,11 +121,7 @@ export class ApiService {
     return this.http.post<ApiMessage & { deleted: number }>(`${this.api}/contacts/bulk-delete`, { ids });
   }
 
-  // ─── Importação de contatos em massa ───
-  // O CSV sobe como arquivo e o servidor devolve um job. Nenhuma chamada daqui
-  // carrega linhas de contato: elas ficam no servidor do upload até a gravação.
-
-  /** Envia o arquivo e devolve o job criado. Aceita um Blob, para o CSV colado na tela. */
+  /** Aceita Blob para o CSV colado na tela. */
   startImport(file: Blob, filename: string, listIds: string[]): Observable<{ id: string; status: string }> {
     const fd = new FormData();
     fd.append('file', file, filename);
@@ -146,7 +134,6 @@ export class ApiService {
     return this.http.get<ImportJob>(`${this.api}/contacts/import/${id}`);
   }
 
-  /** Importações ainda em aberto — deixa a tela retomar um job depois de recarregar. */
   getOpenImports(): Observable<OpenImport[]> {
     return this.http.get<OpenImport[]>(`${this.api}/contacts/import/open`);
   }
@@ -159,12 +146,10 @@ export class ApiService {
     return this.http.post<ApiMessage>(`${this.api}/contacts/import/${id}/cancel`, {});
   }
 
-  /** Relatório dos recusados, montado no servidor a partir do resultado guardado. */
   downloadImportInvalid(id: string): Observable<Blob> {
     return this.http.get(`${this.api}/contacts/import/${id}/invalid`, { responseType: 'blob' });
   }
 
-  // ─── Templates ───
   getTemplates(): Observable<Template[]> {
     return this.http.get<Template[]>(`${this.api}/templates`);
   }
@@ -191,7 +176,6 @@ export class ApiService {
     return this.http.delete<void>(`${this.api}/templates/${id}`);
   }
 
-  // ─── Campanhas ───
   getCampaigns(): Observable<Campaign[]> {
     return this.http.get<Campaign[]>(`${this.api}/campaigns`);
   }
@@ -223,15 +207,7 @@ export class ApiService {
     return this.http.delete<void>(`${this.api}/campaigns/${id}`);
   }
 
-  /** Envios da campanha. O corpo é o array; a paginação vem nos headers X-*. */
-  /** Relatório de envios em CSV. O backend transmite o arquivo direto do banco. */
-  /**
-   * Relatório de envios. Sai em .xlsx; o servidor cai para CSV sozinho quando a
-   * campanha passa do limite de linhas de uma planilha.
-   *
-   * Observa a resposta inteira porque o nome do arquivo — e a extensão certa — vem no
-   * cabeçalho: quem decide o formato é o servidor, não a tela.
-   */
+  /** Observa a resposta inteira: o servidor decide .xlsx ou .csv e o nome vem no cabeçalho. */
   campaignReport(id: string, status = ''): Observable<HttpResponse<Blob>> {
     return this.http.get(`${this.api}/campaigns/${id}/report`, {
       params: this.params({ status }),
@@ -256,12 +232,10 @@ export class ApiService {
       );
   }
 
-  // ─── Bounces (admin) ───
   reportBounce(email: string, campaignId?: string): Observable<ApiMessage> {
     return this.http.post<ApiMessage>(`${this.api}/bounces`, { email, campaignId });
   }
 
-  // ─── Segmentos ───
   getSegments(): Observable<Segment[]> {
     return this.http.get<Segment[]>(`${this.api}/segments`);
   }
@@ -275,7 +249,6 @@ export class ApiService {
     return this.http.delete<void>(`${this.api}/segments/${id}`);
   }
 
-  // ─── SMTP (admin) ───
   getSmtp(): Observable<SmtpServer[]> {
     return this.http.get<SmtpServer[]>(`${this.api}/smtp`);
   }
@@ -292,44 +265,45 @@ export class ApiService {
     return this.http.delete<void>(`${this.api}/smtp/${id}`);
   }
 
-  // ─── Usuários do cliente (admin) ───
+  getSendingDomains(): Observable<SendingDomainsOverview> {
+    return this.http.get<SendingDomainsOverview>(`${this.api}/sending-domains`);
+  }
+  verifySendingDomain(domain: string): Observable<ApiMessage & { domain: SendingDomain }> {
+    return this.http.post<ApiMessage & { domain: SendingDomain }>(
+      `${this.api}/sending-domains/${encodeURIComponent(domain)}/verify`,
+      {}
+    );
+  }
+
   getUsers(): Observable<ManagedUser[]> {
     return this.http.get<ManagedUser[]>(`${this.api}/users`);
   }
-  /** Convite: dados públicos da tela de definir senha (sem sessão). */
   getInvite(token: string): Observable<InvitePreview> {
     return this.http.get<InvitePreview>(`${this.api}/auth/invite`, { params: { token } });
   }
 
-  /** Convite: define a senha e já devolve a sessão iniciada. */
   acceptInvite(token: string, password: string): Observable<LoginResult> {
     return this.http.post<LoginResult>(`${this.api}/auth/invite/accept`, { token, password });
   }
 
-  /** Reenvia o convite de quem ainda não definiu a senha (invalida o link anterior). */
+  /** Invalida o link anterior. */
   resendInvite(id: string): Observable<ApiMessage & { invite: InviteLink }> {
     return this.http.post<ApiMessage & { invite: InviteLink }>(`${this.api}/users/${id}/resend-invite`, {});
   }
 
-  /** O convite só vem na resposta quando o usuário foi criado SEM senha. */
-  // ─── Recuperação de senha ───
-
-  /** Pedido feito na tela de login. A resposta é sempre a mesma, exista o email ou não. */
+  /** A resposta é sempre a mesma, exista o email ou não. */
   forgotPassword(email: string): Observable<ApiMessage> {
     return this.http.post<ApiMessage>(`${this.api}/auth/forgot-password`, { email });
   }
 
-  /** Dados públicos do link de redefinição (sem sessão). */
   getReset(token: string): Observable<InvitePreview> {
     return this.http.get<InvitePreview>(`${this.api}/auth/reset`, { params: { token } });
   }
 
-  /** Define a nova senha pelo link e já devolve a sessão iniciada. */
   resetPassword(token: string, password: string): Observable<LoginResult> {
     return this.http.post<LoginResult>(`${this.api}/auth/reset`, { token, password });
   }
 
-  /** Admin/superadmin gera um link de redefinição para um usuário do cliente. */
   userResetLink(id: string): Observable<ApiMessage & { reset: ResetLink }> {
     return this.http.post<ApiMessage & { reset: ResetLink }>(`${this.api}/users/${id}/reset-link`, {});
   }
@@ -344,7 +318,6 @@ export class ApiService {
     return this.http.delete<void>(`${this.api}/users/${id}`);
   }
 
-  // ─── Clientes da plataforma (superadmin) ───
   getTenants(): Observable<TenantSummary[]> {
     return this.http.get<TenantSummary[]>(`${this.api}/tenants`);
   }
@@ -358,13 +331,11 @@ export class ApiService {
     return this.http.delete<ApiMessage>(`${this.api}/tenants/${id}`, { body: { confirmSlug } });
   }
 
-  // ─── Motor de envio (superadmin) ───
-  /** Operação da plataforma: fila + números por cliente (sem dado pessoal). */
   platformOverview(hours = 24): Observable<PlatformOverview> {
     return this.http.get<PlatformOverview>(`${this.api}/platform-monitor/overview`, { params: { hours } });
   }
 
-  /** Falhas detalhadas de todos os clientes. Expõe email de destinatário — auditado no servidor. */
+  /** Expõe email de destinatário — auditado no servidor. */
   platformFailures(limit = 50): Observable<FailureRow[]> {
     return this.http.get<FailureRow[]>(`${this.api}/platform-monitor/failures`, { params: { limit } });
   }

@@ -44,7 +44,6 @@ export class TenantsComponent implements OnInit, OnDestroy {
     adminEmail: 'Informe um email válido.',
   };
 
-  /** Texto de erro do campo (servidor ou validação local). */
   fieldError(field: string): string {
     return this.serverErrors.messageFor(field, this.LOCAL_ERRORS);
   }
@@ -94,15 +93,11 @@ export class TenantsComponent implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Link de acesso do cliente recém-criado. Mostrado sempre: confirma para onde o
-   * email foi e serve de plano B quando a entrega falha.
-   */
+  /** Mostrado sempre: serve de plano B quando a entrega do email falha. */
   welcome: TenantWelcome | null = null;
   welcomeFor = '';
   linkCopied = false;
 
-  /** Copia o link para a área de transferência, com retorno visual. */
   async copyWelcomeLink(): Promise<void> {
     if (!this.welcome) return;
     try {
@@ -121,7 +116,6 @@ export class TenantsComponent implements OnInit, OnDestroy {
     this.modal = true;
   }
 
-  /** Deriva o identificador a partir do nome, respeitando o formato exigido pela API. */
   suggestSlug(): void {
     const slug = String(this.form.value.name || '')
       .toLowerCase()
@@ -146,8 +140,7 @@ export class TenantsComponent implements OnInit, OnDestroy {
         this.saving = false;
         this.modal = false;
         this.toast.success(res.message);
-        // O email é best-effort. O link fica à mão para o superadmin repassar por
-        // outro canal caso a entrega falhe (plataforma ainda sem SMTP, caixa recusando).
+        // O email é best-effort: o link fica à mão para repasse por outro canal.
         this.welcome = res.tenant?.welcome ?? null;
         this.welcomeFor = res.tenant?.adminEmail ?? '';
         this.linkCopied = false;
@@ -168,9 +161,6 @@ export class TenantsComponent implements OnInit, OnDestroy {
     this.router.navigate(['/dashboard']);
   }
 
-  // ─── Limites de envio do cliente ───
-
-  /** Cliente cujos limites estão sendo editados; null quando o modal está fechado. */
   limitsFor: TenantSummary | null = null;
   limitsForm: FormGroup;
   savingLimits = false;
@@ -185,7 +175,6 @@ export class TenantsComponent implements OnInit, OnDestroy {
       concurrency: tenant.sendingLimits?.concurrency ?? 0,
       ratePerMinute: tenant.sendingLimits?.ratePerMinute ?? 0,
     });
-    // Carrega o teto atual para mostrar "de N" ao lado de cada campo.
     if (!this.engine) {
       this.api.getPlatformSettings().subscribe({ next: (e) => (this.engine = e) });
     }
@@ -256,7 +245,6 @@ export class TenantsComponent implements OnInit, OnDestroy {
   }
 
   remove(tenant: TenantSummary): void {
-    // Exclusão destrutiva: exige digitar o identificador, igual ao que a API pede.
     this.prompt
       .ask({
         title: 'Excluir cliente',

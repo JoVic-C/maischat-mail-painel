@@ -151,8 +151,7 @@
   </ng-container>
 </app-modal>
 
-<!-- Link do convite: fica disponível para o admin repassar por outro canal quando o
-     email não sai (cliente ainda sem SMTP configurado, caixa recusando, etc.). -->
+<!-- Link do convite para repassar por outro canal quando o email não sai. -->
 <app-modal
   *ngIf="invite"
   [title]="inviteKind === 'reset' ? 'Link de redefinição de senha' : 'Convite gerado'"

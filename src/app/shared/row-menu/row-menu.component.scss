@@ -1,7 +1,7 @@
 :host { display: inline-block; position: relative; }
 
-/* Gatilho discreto: só ganha peso no hover/aberto. Ele não deve competir com a ação
-   principal da linha — é justamente o que estava errado antes. */
+/* Gatilho discreto: só ganha peso no hover/aberto. Não compete com a ação
+   principal da linha. */
 .rm-trigger {
   display: inline-flex;
   align-items: center;
@@ -21,8 +21,6 @@
 .rm-trigger:hover { background: var(--nl); color: var(--n); }
 .rm-trigger:focus-visible { outline: 2px solid var(--o); outline-offset: 2px; }
 .rm-trigger.is-open { background: var(--nl); color: var(--n); border-color: var(--br); }
-
-/* Gatilho com texto: deixa de ser um quadrado de 30px e vira um item de menu. */
 .rm-trigger.has-text {
   width: auto;
   height: auto;
@@ -120,7 +118,5 @@
 @media (prefers-reduced-motion: reduce) {
   .rm-panel { animation: none; }
 }
-
-/* Texto do gatilho: corta com reticências e mantém a seta sempre visível. */
 .rm-texto { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rm-seta { flex: 0 0 auto; }

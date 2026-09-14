@@ -7,16 +7,8 @@ import { AuthService } from '../../services/auth.service';
 import { ServerErrorsHandler } from '../../shared/server-errors/server-errors';
 
 /**
- * Tela de definir senha a partir de um link enviado por email.
- *
- * Serve aos DOIS fluxos, escolhidos pela rota (`data.mode`):
- * - `invite` (/definir-senha) → primeiro acesso; é a única porta de entrada de conta,
- *   já que não existe autocadastro;
- * - `reset` (/redefinir-senha) → recuperação de senha de quem já tem conta.
- *
- * A interface é a mesma porque o ato é o mesmo — escolher uma senha. Só muda o texto
- * e o endpoint. O token é validado no servidor ANTES de qualquer campo aparecer, para
- * a pessoa não preencher um formulário que já se sabe que vai falhar.
+ * Serve aos fluxos `invite` e `reset` (via `data.mode` da rota). O token é validado
+ * no servidor antes de o formulário aparecer.
  */
 @Component({
     selector: 'app-invite',
@@ -25,7 +17,6 @@ import { ServerErrorsHandler } from '../../shared/server-errors/server-errors';
     standalone: false
 })
 export class InviteComponent implements OnInit, OnDestroy {
-  /** 'invite' = primeiro acesso; 'reset' = recuperação. Vem do data da rota. */
   mode: 'invite' | 'reset' = 'invite';
   state: 'loading' | 'ready' | 'invalid' = 'loading';
   invite: InvitePreview | null = null;
@@ -114,7 +105,6 @@ export class InviteComponent implements OnInit, OnDestroy {
     acao.subscribe({
       next: (res) => {
         this.loading = false;
-        // O backend já devolve a sessão iniciada: entra direto, sem passar pelo login.
         this.auth.adoptSession(res.token, res.user);
         this.router.navigate([res.user.role === 'superadmin' ? '/clientes' : '/dashboard']);
       },
@@ -132,7 +122,6 @@ export class InviteComponent implements OnInit, OnDestroy {
   }
 }
 
-/** As duas senhas precisam bater — validação de grupo, marcada no campo de confirmação. */
 function passwordsMatch(group: AbstractControl): ValidationErrors | null {
   const password = group.get('password')?.value;
   const confirm = group.get('confirm')?.value;

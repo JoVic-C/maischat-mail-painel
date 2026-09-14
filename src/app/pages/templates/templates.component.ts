@@ -1,12 +1,19 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { SaveTemplateInput, Template } from '../../models';
 import { ApiService } from '../../services/api.service';
 import { ConfirmService } from '../../shared/confirm/confirm.service';
 import { PromptService } from '../../shared/prompt/prompt.service';
-import { sanitizeEmailHtml } from '../../shared/html/sanitize-html';
+import { sanitizeEmailDocument, sanitizeEmailHtml } from '../../shared/html/sanitize-html';
 import { apiErrorMessage, ServerErrorsHandler } from '../../shared/server-errors/server-errors';
 import { ToastService } from '../../shared/toast/toast.service';
+
+/** Só marcas de documento contam; `<table>` ou `<div>` soltas continuam sendo coladas no visual. */
+function pareceDocumentoHtml(texto: string): boolean {
+  const inicio = texto.trimStart().slice(0, 500).toLowerCase();
+  return inicio.startsWith('<!doctype html') || inicio.startsWith('<html') || /<body[\s>]/.test(inicio);
+}
 
 @Component({
     selector: 'app-templates',
@@ -46,7 +53,6 @@ export class TemplatesComponent implements OnInit, OnDestroy {
     html: 'Escreva o conteúdo do email.',
   };
 
-  /** Texto de erro do campo (servidor ou validação local). */
   fieldError(field: string): string {
     return this.serverErrors.messageFor(field, this.LOCAL_ERRORS);
   }
@@ -65,7 +71,6 @@ export class TemplatesComponent implements OnInit, OnDestroy {
     this.form = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2)]],
       subject: ['', Validators.required],
-      // Preenchido pelo editor visual (contenteditable) ou pelo modo HTML avançado.
       html: ['', Validators.required],
     });
     this.serverErrors = new ServerErrorsHandler(this.form);
@@ -113,9 +118,10 @@ export class TemplatesComponent implements OnInit, OnDestroy {
     this.serverErrors.clear();
     this.form.reset({ name: t.name, subject: t.subject, html: t.html });
     this.previewHtml = '';
-    this.advanced = false;
+    // Email completo no editor visual vira uma segunda prévia e perde o <head> ao ser editado.
+    this.advanced = pareceDocumentoHtml(t.html);
     this.editor = true;
-    this.seedEditor();
+    if (!this.advanced) this.seedEditor();
     this.preview();
   }
 
@@ -124,12 +130,8 @@ export class TemplatesComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Coloca o HTML atual dentro do editor visual (depois que o modal renderiza).
-   *
-   * O `innerHTML` aqui é atribuição direta no DOM: o sanitizador do Angular não passa
-   * por este caminho. Como o HTML vem de um template salvo por outro usuário do cliente,
-   * sanitizar é obrigatório — sem isso, `<img src=x onerror=...>` gravado por um usuário
-   * comum executaria na sessão do admin que abrisse o template para editar.
+   * `innerHTML` direto não passa pelo sanitizador do Angular, e o HTML vem de outro
+   * usuário do cliente: sanitizar é obrigatório para evitar XSS armazenado.
    */
   private seedEditor(): void {
     clearTimeout(this.seedTimer);
@@ -139,9 +141,8 @@ export class TemplatesComponent implements OnInit, OnDestroy {
       const safe = sanitizeEmailHtml(original);
       this.editorRef.nativeElement.innerHTML = safe;
 
-      // Condicional do Outlook não passa pelo sanitizador (ver sanitize-html.ts). Sem
-      // este aviso o fallback sumiria calado assim que a pessoa digitasse no visual,
-      // porque o syncFromEditor grava de volta o que está no DOM.
+      // Condicional do Outlook não sobrevive ao sanitizador (ver sanitize-html.ts) e o
+      // syncFromEditor gravaria o DOM sem ela: avisa o usuário.
       if (original.includes('<!--[if') && !safe.includes('<!--[if')) {
         this.toast.warn(
           'Este template tem trechos condicionais do Outlook, que o editor visual não suporta. ' +
@@ -151,12 +152,28 @@ export class TemplatesComponent implements OnInit, OnDestroy {
     }, 0);
   }
 
-  toggleAdvanced(): void {
-    this.advanced = !this.advanced;
-    if (!this.advanced) this.seedEditor(); // voltou pro visual → recarrega o conteúdo
+  async toggleAdvanced(): Promise<void> {
+    if (!this.advanced) {
+      this.advanced = true;
+      return;
+    }
+
+    if (pareceDocumentoHtml(String(this.form.value.html || ''))) {
+      const ok = await this.confirm.ask({
+        title: 'Abrir no editor visual?',
+        message:
+          'Este template é um email completo, com layout e CSS próprios. O editor visual não preserva ' +
+          'essa estrutura: ao editar por ele, o layout pode se perder.\n\nPara alterar textos, prefira o HTML avançado.',
+        confirmLabel: 'Abrir mesmo assim',
+        danger: true,
+      });
+      if (!ok) return;
+    }
+
+    this.advanced = false;
+    this.seedEditor();
   }
 
-  /** Aplica um comando de formatação e sincroniza o HTML. */
   exec(cmd: string, value?: string): void {
     document.execCommand(cmd, false, value);
     this.syncFromEditor();
@@ -184,7 +201,6 @@ export class TemplatesComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** Faz upload da imagem escolhida e a insere no editor. */
   onImageSelected(event: Event, input: HTMLInputElement): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
@@ -206,7 +222,6 @@ export class TemplatesComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Lê o HTML gerado pelo editor visual para o form e atualiza a prévia. */
   syncFromEditor(): void {
     if (this.editorRef) {
       this.form.patchValue({ html: this.editorRef.nativeElement.innerHTML }, { emitEvent: true });
@@ -215,22 +230,49 @@ export class TemplatesComponent implements OnInit, OnDestroy {
     this.preview();
   }
 
+  /**
+   * O contenteditable insere código colado como texto escapado; um documento HTML
+   * completo vai direto para o modo HTML avançado.
+   */
+  onPaste(event: ClipboardEvent): void {
+    const texto = event.clipboardData?.getData('text/plain') ?? '';
+    if (!pareceDocumentoHtml(texto)) return;
+
+    event.preventDefault();
+    this.advanced = true;
+    this.form.patchValue({ html: texto.trim() });
+    this.form.controls['html'].markAsTouched();
+    this.preview();
+    this.toast.info('Você colou um email em HTML. Ele foi aberto no modo HTML avançado para manter o layout.');
+  }
+
+  /** Prévia pronta para o iframe: já sanitizada e marcada como confiável. */
+  previewDoc: SafeHtml | null = null;
+  private readonly domSanitizer = inject(DomSanitizer);
+
   preview(): void {
     clearTimeout(this.previewTimer);
     const html = String(this.form.value.html || '');
     if (!html) {
       this.previewHtml = '';
+      this.previewDoc = null;
       return;
     }
     this.previewTimer = setTimeout(() => {
       this.api.previewTemplate({ html, subject: String(this.form.value.subject || '') }).subscribe({
-        // O binding [innerHTML] da prévia já passa pelo sanitizador do Angular; o
-        // DOMPurify vem antes como defesa em profundidade (bypasses do sanitizador
-        // aparecem de tempos em tempos — a 18 tinha vários).
-        next: (res) => (this.previewHtml = sanitizeEmailHtml(res.html)),
-        error: () => (this.previewHtml = '<em style="color:var(--r)">Erro no template</em>'),
+        next: (res) => this.mostrarPrevia(sanitizeEmailDocument(res.html)),
+        error: () => this.mostrarPrevia('<p style="font-family:sans-serif;color:#c0392b">Erro no template.</p>'),
       });
     }, 350);
+  }
+
+  /**
+   * Iframe com `sandbox` vazio isola o CSS do email e bloqueia script. O bypass só existe
+   * porque o Angular exige para `srcdoc`, e é aplicado sobre o que o DOMPurify já limpou.
+   */
+  private mostrarPrevia(documento: string): void {
+    this.previewHtml = documento;
+    this.previewDoc = this.domSanitizer.bypassSecurityTrustHtml(documento);
   }
 
   save(): void {

@@ -49,8 +49,6 @@
 
 form .field { margin-bottom: 14px; }
 button { margin-top: 6px; }
-
-/* ─── Esqueleto de carregamento ─── */
 .skeleton {
   display: flex;
   flex-direction: column;
@@ -74,8 +72,6 @@ button { margin-top: 6px; }
   from { background-position: 100% 50%; }
   to { background-position: 0 50%; }
 }
-
-/* Respeita quem pediu menos movimento no sistema. */
 @media (prefers-reduced-motion: reduce) {
   .auth-card { animation: none; }
   .sk { animation: none; }

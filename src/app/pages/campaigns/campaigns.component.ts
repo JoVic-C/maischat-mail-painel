@@ -17,11 +17,11 @@ import { ApiService } from '../../services/api.service';
 import { baixarBlob } from '../../shared/download';
 import { AuthService } from '../../services/auth.service';
 import { ConfirmService } from '../../shared/confirm/confirm.service';
+import { MultiSelectOption } from '../../shared/multi-select/multi-select.component';
 import { PromptService } from '../../shared/prompt/prompt.service';
 import { apiErrorMessage, ServerErrorsHandler } from '../../shared/server-errors/server-errors';
 import { ToastService } from '../../shared/toast/toast.service';
 
-/** De quanto em quanto tempo a lista se atualiza sozinha enquanto há campanha em envio. */
 const LIVE_REFRESH_MS = 5000;
 const LOGS_PAGE_SIZE = 50;
 
@@ -39,6 +39,7 @@ export class CampaignsComponent implements OnInit, OnDestroy {
   campaigns: Campaign[] = [];
   templates: Template[] = [];
   lists: List[] = [];
+  listOptions: MultiSelectOption[] = [];
   smtps: SmtpServer[] = [];
   segments: Segment[] = [];
 
@@ -89,7 +90,6 @@ export class CampaignsComponent implements OnInit, OnDestroy {
     listIds: 'Selecione ao menos uma lista de destinatários.',
   };
 
-  /** Texto de erro do campo (servidor ou validação local). */
   fieldError(field: string): string {
     return this.serverErrors.messageFor(field, this.LOCAL_ERRORS);
   }
@@ -122,10 +122,16 @@ export class CampaignsComponent implements OnInit, OnDestroy {
     this.pendingOpenId = this.route.snapshot.queryParamMap.get('open');
     this.load();
 
-    // Os apoios (template/lista/smtp/segmento) alimentam o formulário; se um falhar,
-    // avisa mas não derruba a tela principal.
+    // Falha nos dados de apoio do formulário avisa, mas não derruba a tela.
     this.api.getTemplates().subscribe({ next: (t) => (this.templates = t), error: (e) => this.toast.apiError(e) });
-    this.api.getLists().subscribe({ next: (l) => (this.lists = l), error: (e) => this.toast.apiError(e) });
+    this.api.getLists().subscribe({
+      next: (l) => {
+        this.lists = l;
+        this.listOptions = l.map((list) => ({ value: list._id, label: list.name, meta: `${list.contactCount} ${list.contactCount === 1 ? 'contato' : 'contatos'}`,
+        }));
+      },
+      error: (e) => this.toast.apiError(e),
+    });
     this.api.getSegments().subscribe({ next: (s) => (this.segments = s), error: (e) => this.toast.apiError(e) });
     // SMTP é restrito a admin — usuário comum simplesmente não escolhe servidor.
     if (this.isAdmin) {
@@ -141,8 +147,6 @@ export class CampaignsComponent implements OnInit, OnDestroy {
   get isAdmin(): boolean {
     return this.auth.isAdmin;
   }
-
-  // ─── Carregamento e atualização ao vivo ───
 
   load(): void {
     this.loading = !this.campaigns.length; // refresh silencioso quando já há dados na tela
@@ -167,7 +171,6 @@ export class CampaignsComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Há disparo em andamento? Então as métricas mudam sozinhas e a tela acompanha. */
   get liveRefreshOn(): boolean {
     return !!this.liveTimer;
   }
@@ -203,16 +206,10 @@ export class CampaignsComponent implements OnInit, OnDestroy {
           this.loadLogs(true);
         }
       },
-      error: () => this.stopLiveRefresh(), // parou de responder: não insiste em silêncio
+      error: () => this.stopLiveRefresh(),
     });
   }
 
-  /**
-   * Baixa o relatório de envios da campanha.
-   *
-   * O arquivo vem transmitido do servidor (uma linha por destinatário), então aqui só
-   * entregamos o blob ao navegador — nada é montado nem acumulado na tela.
-   */
   baixarRelatorio(c: Campaign): void {
     this.api.campaignReport(c._id).subscribe({
       next: (res) => {
@@ -223,12 +220,10 @@ export class CampaignsComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Só rascunho e agendada podem ser editadas — o backend recusa editar em envio. */
+  /** O backend recusa editar campanha em envio. */
   canEdit(c: Campaign): boolean {
     return c.status === 'draft' || c.status === 'scheduled';
   }
-
-  // ─── CRUD ───
 
   openCreate(): void {
     this.editingId = null;
@@ -329,9 +324,6 @@ export class CampaignsComponent implements OnInit, OnDestroy {
       });
   }
 
-  // ─── Disparo ───
-
-  /** Abre o modal que pergunta o escopo do disparo (todos vs só entregues). */
   start(c: Campaign): void {
     this.scopeCampaign = c;
     this.scopeModal = true;
@@ -405,8 +397,6 @@ export class CampaignsComponent implements OnInit, OnDestroy {
       });
   }
 
-  // ─── Agendamento ───
-
   openSchedule(c: Campaign): void {
     this.scheduleCampaignRef = c;
     this.scheduleAt = '';
@@ -461,8 +451,6 @@ export class CampaignsComponent implements OnInit, OnDestroy {
         });
       });
   }
-
-  // ─── Detalhe do disparo ───
 
   viewDetail(c: Campaign): void {
     this.detailCampaign = c;
@@ -543,8 +531,6 @@ export class CampaignsComponent implements OnInit, OnDestroy {
       });
   }
 
-  // ─── Apresentação ───
-
   sortedLinks(links: LinkStat[] | undefined): LinkStat[] {
     return [...(links ?? [])].sort((a, b) => b.clicks - a.clicks);
   }
@@ -566,7 +552,6 @@ export class CampaignsComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Traduz e explica o erro técnico do SMTP em linguagem para o cliente. */
   bounceInfo(raw: string): { title: string; explain: string } {
     const e = (raw || '').toLowerCase();
     const has = (...keys: string[]): boolean => keys.some((k) => e.includes(k));
@@ -597,7 +582,6 @@ export class CampaignsComponent implements OnInit, OnDestroy {
           'Usuário ou senha do SMTP estão incorretos. Não é problema do destinatário — verifique as credenciais na tela de SMTP.',
       };
 
-    // Conexão com o servidor de envio
     if (has('econnrefused', 'etimedout', 'timeout', 'getaddrinfo', 'enotfound', 'econnreset', 'socket', 'connection'))
       return {
         title: 'Servidor de envio indisponível',
@@ -605,7 +589,6 @@ export class CampaignsComponent implements OnInit, OnDestroy {
           'Não foi possível conectar ao servidor SMTP (host/porta errados ou fora do ar). Não é problema do destinatário.',
       };
 
-    // Destinatário inexistente
     if (
       has(
         '550',
@@ -624,14 +607,12 @@ export class CampaignsComponent implements OnInit, OnDestroy {
         explain: 'A caixa de email do destinatário não existe ou foi desativada. Recomendado remover este contato.',
       };
 
-    // Caixa cheia
     if (has('552', 'quota', 'mailbox full', 'over quota', 'insufficient'))
       return {
         title: 'Caixa de entrada cheia',
         explain: 'O destinatário está sem espaço na caixa. Costuma ser temporário — vale tentar mais tarde.',
       };
 
-    // Bloqueio por spam/reputação
     if (has('554', 'spam', 'blocked', 'blacklist', 'reputation', 'policy', 'denied', 'rejected due'))
       return {
         title: 'Bloqueado por antispam',
@@ -639,7 +620,6 @@ export class CampaignsComponent implements OnInit, OnDestroy {
           'O servidor do destinatário recusou por política de spam/reputação. Verifique SPF/DKIM e a reputação do remetente.',
       };
 
-    // Falha temporária (soft)
     if (has('421', '450', 'try again', 'temporarily', 'temporary', 'rate limit', 'throttl', 'greylist'))
       return {
         title: 'Falha temporária',

@@ -123,7 +123,8 @@ test.describe('Login', () => {
 
     await page.goto('/campaigns');
 
-    await expect(page).toHaveURL(/\/login$/);
+    await expect(page).toHaveURL(/\/login\?sessao=encerrada$/);
+    await expect(page.getByText('Sua sessão foi encerrada. Entre novamente.')).toBeVisible();
     const left = await page.evaluate(() => ({
       token: localStorage.getItem('mmail_token'),
       user: localStorage.getItem('mmail_user'),

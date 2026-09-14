@@ -1,6 +1,6 @@
 import { Component, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { ServerErrorsHandler } from '../../shared/server-errors/server-errors';
@@ -34,17 +34,26 @@ export class LoginComponent implements OnDestroy {
   forgotSent = false;
   forgotLoading = false;
 
+  readonly sessionNotice: string;
+
+  private readonly SESSION_NOTICES: Record<string, string> = {
+    expirada: 'Sua sessão expirou por inatividade. Entre novamente.',
+    encerrada: 'Sua sessão foi encerrada. Entre novamente.',
+  };
+
   constructor(
     private auth: AuthService,
     private api: ApiService,
     private router: Router,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    route: ActivatedRoute
   ) {
     this.form = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', Validators.required],
     });
     this.serverErrors = new ServerErrorsHandler(this.form);
+    this.sessionNotice = this.SESSION_NOTICES[route.snapshot.queryParamMap.get('sessao') ?? ''] ?? '';
   }
 
   ngOnDestroy(): void {

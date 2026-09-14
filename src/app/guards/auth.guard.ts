@@ -5,9 +5,8 @@ import { ToastService } from '../shared/toast/toast.service';
 
 export const authGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
-  const router = inject(Router);
   if (auth.isLoggedIn) return true;
-  router.navigate(['/login']);
+  auth.redirectToLogin();
   return false;
 };
 
@@ -18,7 +17,7 @@ export const tenantGuard: CanActivateFn = () => {
   const toast = inject(ToastService);
 
   if (!auth.isLoggedIn) {
-    router.navigate(['/login']);
+    auth.redirectToLogin();
     return false;
   }
   if (auth.hasTenantContext) return true;
@@ -34,7 +33,7 @@ export const adminGuard: CanActivateFn = () => {
   const toast = inject(ToastService);
 
   if (!auth.isLoggedIn) {
-    router.navigate(['/login']);
+    auth.redirectToLogin();
     return false;
   }
   if (!auth.isAdmin) {
@@ -56,7 +55,7 @@ export const superadminGuard: CanActivateFn = () => {
   const toast = inject(ToastService);
 
   if (!auth.isLoggedIn) {
-    router.navigate(['/login']);
+    auth.redirectToLogin();
     return false;
   }
   if (!auth.isSuperadmin) {

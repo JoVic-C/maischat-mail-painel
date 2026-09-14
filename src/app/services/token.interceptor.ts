@@ -1,7 +1,17 @@
-import { HttpErrorResponse, HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
+import {
+  HttpErrorResponse,
+  HttpEvent,
+  HttpHandler,
+  HttpHeaders,
+  HttpInterceptor,
+  HttpRequest,
+  HttpResponse,
+} from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, catchError, throwError } from 'rxjs';
+import { Observable, catchError, tap, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
+
+const SESSION_TOKEN_HEADER = 'X-Session-Token';
 
 @Injectable()
 export class TokenInterceptor implements HttpInterceptor {
@@ -20,10 +30,20 @@ export class TokenInterceptor implements HttpInterceptor {
     const authReq = Object.keys(headers).length ? req.clone({ setHeaders: headers }) : req;
 
     return next.handle(authReq).pipe(
+      tap((event) => {
+        if (event instanceof HttpResponse) this.adoptRenewedToken(event.headers);
+      }),
       catchError((err: HttpErrorResponse) => {
-        if (err.status === 401) this.auth.logout();
+        // Sem token salvo, outra requisição já encerrou a sessão; deslogar de novo apagaria o aviso.
+        if (err.status === 401 && this.auth.token) this.auth.logout('encerrada');
+        else if (err.headers) this.adoptRenewedToken(err.headers);
         return throwError(() => err);
       })
     );
+  }
+
+  private adoptRenewedToken(headers: HttpHeaders): void {
+    const renewed = headers.get(SESSION_TOKEN_HEADER);
+    if (renewed) this.auth.renewToken(renewed);
   }
 }

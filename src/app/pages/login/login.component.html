@@ -6,6 +6,7 @@
     <p class="sub">Entre para acessar o painel</p>
 
     <form [formGroup]="form" (ngSubmit)="submit()">
+      <p class="session-note" role="status" *ngIf="sessionNotice && !formError">{{ sessionNotice }}</p>
       <p class="error-msg" *ngIf="formError">{{ formError }}</p>
 
       <div class="field">

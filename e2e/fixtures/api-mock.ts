@@ -51,7 +51,7 @@ const CORS_HEADERS: Record<string, string> = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
   'access-control-allow-headers': '*',
-  'access-control-expose-headers': 'X-Total-Count,X-Page,X-Page-Size',
+  'access-control-expose-headers': 'X-Session-Token,X-Total-Count,X-Page,X-Page-Size',
 };
 
 const ISO = '2026-08-20T12:00:00.000Z';
@@ -169,6 +169,8 @@ export interface MockSeed {
   sendingDomains?: SendingDomainsOverview;
   /** Resposta da verificação por domínio; sem entrada, devolve o domínio como está. */
   verifiedDomains?: Record<string, SendingDomain>;
+  /** Devolvido no X-Session-Token de toda resposta, como a API faz ao renovar a sessão. */
+  renewedToken?: string;
 }
 
 /** Dublê da API com estado em memória, registro de chamadas e falhas forçadas por rota. */
@@ -184,6 +186,7 @@ export class ApiMock {
   platformSettings: PlatformSettings;
   sendingDomains: SendingDomainsOverview;
   verifiedDomains: Record<string, SendingDomain>;
+  renewedToken?: string;
 
   /** Fila de estados do job, consumida a cada consulta: testa a transição sem cronômetro. */
   importStates: Record<string, unknown>[] = [];
@@ -208,6 +211,7 @@ export class ApiMock {
     this.platformSettings = seed.platformSettings ?? { ...DEFAULT_PLATFORM_SETTINGS };
     this.sendingDomains = seed.sendingDomains ?? { enforced: true, platformHosts: ['mail.maismail.com.br'], domains: [] };
     this.verifiedDomains = seed.verifiedDomains ?? {};
+    this.renewedToken = seed.renewedToken;
   }
 
   fail(routeAlias: string, status: number, body: unknown): void {
@@ -491,7 +495,11 @@ export class ApiMock {
   private async json(route: Route, payload: unknown, status = 200): Promise<void> {
     await route.fulfill({
       status,
-      headers: { ...CORS_HEADERS, 'content-type': 'application/json' },
+      headers: {
+        ...CORS_HEADERS,
+        'content-type': 'application/json',
+        ...(this.renewedToken ? { 'X-Session-Token': this.renewedToken } : {}),
+      },
       body: payload === null ? '' : JSON.stringify(payload),
     });
   }

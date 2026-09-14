@@ -9,6 +9,8 @@ const TOKEN_KEY = 'mmail_token';
 const USER_KEY = 'mmail_user';
 const TENANT_KEY = 'mmail_tenant';
 
+export type SessionEndReason = 'expirada' | 'encerrada';
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private api = environment.apiUrl;
@@ -36,12 +38,15 @@ export class AuthService {
     );
   }
 
-  logout(): void {
-    this.user = null;
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    this.setActiveTenant(null);
-    this.router.navigate(['/login']);
+  logout(reason?: SessionEndReason): void {
+    this.clearSession();
+    this.router.navigate(['/login'], reason ? { queryParams: { sessao: reason } } : undefined);
+  }
+
+  /** Usado pelos guards: distingue quem nunca entrou de quem ficou tempo demais sem usar. */
+  redirectToLogin(): void {
+    const token = this.token;
+    this.logout(token && this.isExpired(token) ? 'expirada' : undefined);
   }
 
   /** Derruba as sessões deste usuário em todos os dispositivos (inclusive esta). */
@@ -71,10 +76,34 @@ export class AuthService {
     this.setActiveTenant(user.role !== 'superadmin' ? user.tenantId : null);
   }
 
+  /** Token renovado pela API a cada uso; ignorado se a sessão já terminou nesse meio-tempo. */
+  renewToken(token: string): void {
+    if (this.token) localStorage.setItem(TOKEN_KEY, token);
+  }
+
   private persist(token: string, user: AuthUser): void {
     this.user = user;
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
+  }
+
+  private clearSession(): void {
+    this.user = null;
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    this.setActiveTenant(null);
+  }
+
+  /** Só confere o prazo: quem valida a assinatura é o backend. Token ilegível segue para ele decidir. */
+  private isExpired(token: string): boolean {
+    const payload = token.split('.')[1];
+    if (!payload) return false;
+    try {
+      const { exp } = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as { exp?: unknown };
+      return typeof exp === 'number' && exp * 1000 <= Date.now();
+    } catch {
+      return false;
+    }
   }
 
   get token(): string | null {
@@ -82,7 +111,8 @@ export class AuthService {
   }
 
   get isLoggedIn(): boolean {
-    return !!this.token;
+    const token = this.token;
+    return !!token && !this.isExpired(token);
   }
 
   get currentUser(): AuthUser | null {

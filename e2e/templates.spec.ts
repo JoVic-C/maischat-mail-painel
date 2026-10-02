@@ -115,8 +115,31 @@ test.describe('Templates — sanitização do editor', () => {
 
     expect(await page.evaluate(() => (window as unknown as Record<string, unknown>)['__xss_img'] ?? false)).toBe(false);
     expect(await previa.locator('body').innerHTML()).not.toContain('onerror');
-    // Defesa independente do DOMPurify: o iframe não pode ter permissão nenhuma.
-    await expect(page.locator('iframe.preview')).toHaveAttribute('sandbox', '');
+    // Defesa independente do DOMPurify: o iframe só pode abrir links, nunca rodar script.
+    await expect(page.locator('iframe.preview')).toHaveAttribute(
+      'sandbox',
+      'allow-popups allow-popups-to-escape-sandbox'
+    );
+  });
+
+  test('link da prévia abre em nova aba para ser testado', async ({ page }) => {
+    const destino = 'https://destino.test/oferta';
+    await page.context().route(destino, (route) => route.fulfill({ contentType: 'text/html', body: '<h1>Oferta</h1>' }));
+    const api = new ApiMock({
+      templates: [makeTemplate({ name: 'Com link', html: `<p>Oi</p><a href="${destino}">Ver oferta</a>` })],
+    });
+    await api.install(page);
+    await seedSession(page, ADMIN);
+
+    await page.goto('/templates');
+    await page.getByRole('button', { name: 'editar' }).click();
+
+    const link = page.frameLocator('iframe.preview').getByRole('link', { name: 'Ver oferta' });
+    const [novaAba] = await Promise.all([page.waitForEvent('popup'), link.click()]);
+
+    await expect(novaAba).toHaveURL(destino);
+    // O painel continua onde estava: o link não navega o iframe nem a página.
+    await expect(page).toHaveURL(/\/templates$/);
   });
 
   test('email completo aparece na prévia com o CSS do <head>', async ({ page }) => {

@@ -13,6 +13,14 @@ export function sanitizeEmailDocument(html: string): string {
   return DOMPurify.sanitize(html, { ...emailConfig(), WHOLE_DOCUMENT: true });
 }
 
+/**
+ * Faz os links da prévia abrirem em nova aba, para o usuário poder testá-los. O `<base>` entra
+ * depois da sanitização: o que vier do template continua barrado pelo FORBID_TAGS.
+ */
+export function abrirLinksEmNovaAba(documentoSanitizado: string): string {
+  return documentoSanitizado.replace(/<head[^>]*>/i, (head) => `${head}<base target="_blank">`);
+}
+
 function emailConfig() {
   return {
     /*

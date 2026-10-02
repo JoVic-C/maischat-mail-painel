@@ -5,7 +5,7 @@ import { SaveTemplateInput, Template } from '../../models';
 import { ApiService } from '../../services/api.service';
 import { ConfirmService } from '../../shared/confirm/confirm.service';
 import { PromptService } from '../../shared/prompt/prompt.service';
-import { sanitizeEmailDocument, sanitizeEmailHtml } from '../../shared/html/sanitize-html';
+import { abrirLinksEmNovaAba, sanitizeEmailDocument, sanitizeEmailHtml } from '../../shared/html/sanitize-html';
 import { apiErrorMessage, ServerErrorsHandler } from '../../shared/server-errors/server-errors';
 import { ToastService } from '../../shared/toast/toast.service';
 
@@ -260,15 +260,16 @@ export class TemplatesComponent implements OnInit, OnDestroy {
     }
     this.previewTimer = setTimeout(() => {
       this.api.previewTemplate({ html, subject: String(this.form.value.subject || '') }).subscribe({
-        next: (res) => this.mostrarPrevia(sanitizeEmailDocument(res.html)),
+        next: (res) => this.mostrarPrevia(abrirLinksEmNovaAba(sanitizeEmailDocument(res.html))),
         error: () => this.mostrarPrevia('<p style="font-family:sans-serif;color:#c0392b">Erro no template.</p>'),
       });
     }, 350);
   }
 
   /**
-   * Iframe com `sandbox` vazio isola o CSS do email e bloqueia script. O bypass só existe
-   * porque o Angular exige para `srcdoc`, e é aplicado sobre o que o DOMPurify já limpou.
+   * O iframe em `sandbox` isola o CSS do email e bloqueia script; a única permissão é abrir
+   * links em nova aba. O bypass só existe porque o Angular exige para `srcdoc`, e é aplicado
+   * sobre o que o DOMPurify já limpou.
    */
   private mostrarPrevia(documento: string): void {
     this.previewHtml = documento;

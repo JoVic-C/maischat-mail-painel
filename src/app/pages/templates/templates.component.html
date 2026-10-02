@@ -138,8 +138,15 @@
 
     <div class="ff" *ngIf="previewHtml && previewDoc">
       <label>Prévia (com dados de exemplo)</label>
-      <!-- sandbox vazio: sem script, sem origem. O documento já chega limpo pelo DOMPurify. -->
-      <iframe class="preview" sandbox="" [srcdoc]="previewDoc" title="Prévia do email"></iframe>
+      <!-- sandbox sem script e sem origem; só libera abrir links em nova aba, fora do sandbox,
+           para o site de destino funcionar. O documento já chega limpo pelo DOMPurify. -->
+      <iframe
+        class="preview"
+        sandbox="allow-popups allow-popups-to-escape-sandbox"
+        [srcdoc]="previewDoc"
+        title="Prévia do email"
+      ></iframe>
+      <p class="hint">Clique nos links da prévia para testá-los: eles abrem em nova aba, sem rastreamento.</p>
     </div>
   </form>
 

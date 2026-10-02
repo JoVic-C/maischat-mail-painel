@@ -30,6 +30,9 @@ import {
   SaveSmtpInput,
   SendingDomain,
   SendingDomainsOverview,
+  FormSubmission,
+  FormWebhook,
+  SaveFormWebhookInput,
   SaveTemplateInput,
   SaveUserInput,
   Segment,
@@ -71,6 +74,9 @@ export class ApiService {
     });
   }
 
+  getList(id: string): Observable<List> {
+    return this.http.get<List>(`${this.api}/lists/${id}`);
+  }
   getLists(): Observable<List[]> {
     return this.http.get<List[]>(`${this.api}/lists`);
   }
@@ -273,6 +279,22 @@ export class ApiService {
       `${this.api}/sending-domains/${encodeURIComponent(domain)}/verify`,
       {}
     );
+  }
+
+  getFormWebhooks(): Observable<FormWebhook[]> {
+    return this.http.get<FormWebhook[]>(`${this.api}/form-webhooks`);
+  }
+  saveFormWebhook(data: SaveFormWebhookInput): Observable<ApiMessage & { webhook: FormWebhook }> {
+    return this.http.post<ApiMessage & { webhook: FormWebhook }>(`${this.api}/form-webhooks/save`, data);
+  }
+  regenerateFormWebhook(id: string): Observable<ApiMessage & { webhook: FormWebhook }> {
+    return this.http.post<ApiMessage & { webhook: FormWebhook }>(`${this.api}/form-webhooks/${id}/regenerate`, {});
+  }
+  deleteFormWebhook(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.api}/form-webhooks/${id}`);
+  }
+  getFormSubmissions(id: string): Observable<FormSubmission[]> {
+    return this.http.get<FormSubmission[]>(`${this.api}/form-webhooks/${id}/submissions`);
   }
 
   getUsers(): Observable<ManagedUser[]> {

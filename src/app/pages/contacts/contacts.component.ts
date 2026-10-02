@@ -1,7 +1,10 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { Contact, ContactQuery, ContactStatus, DeliveryFilter, List, SaveContactInput } from '../../models';
 import { ApiService } from '../../services/api.service';
+import { ImportTrackerService } from '../../services/import-tracker.service';
 import { ConfirmService } from '../../shared/confirm/confirm.service';
 import { baixarBlob } from '../../shared/download';
 import { MultiSelectOption } from '../../shared/multi-select/multi-select.component';
@@ -63,11 +66,15 @@ export class ContactsComponent implements OnInit, OnDestroy {
 
 
   private searchTimer?: ReturnType<typeof setTimeout>;
+  private subs = new Subscription();
 
   constructor(
     private api: ApiService,
     private toast: ToastService,
     private confirm: ConfirmService,
+    private tracker: ImportTrackerService,
+    private route: ActivatedRoute,
+    private router: Router,
     private fb: FormBuilder
   ) {
     this.form = this.fb.group({
@@ -91,10 +98,23 @@ export class ContactsComponent implements OnInit, OnDestroy {
       // A listagem de listas é acessória: falhar aqui não pode derrubar a tela.
       error: (err) => this.toast.apiError(err),
     });
+
+    // Importação minimizada que terminou: a base mudou por trás da tela.
+    this.subs.add(this.tracker.finished$.subscribe(() => this.reload()));
+
+    // O cartão do canto pede para reabrir a importação (revisar e confirmar).
+    this.subs.add(
+      this.route.queryParamMap.subscribe((params) => {
+        if (params.get('importar') !== '1') return;
+        this.importModal = true;
+        this.router.navigate([], { queryParams: { importar: null }, queryParamsHandling: 'merge', replaceUrl: true });
+      })
+    );
   }
 
   ngOnDestroy(): void {
     clearTimeout(this.searchTimer);
+    this.subs.unsubscribe();
     this.serverErrors.destroy();
   }
 
@@ -257,9 +277,9 @@ export class ContactsComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** A recarga da tabela vem pelo `finished$` do acompanhamento, que também cobre o caso minimizado. */
   onImported(): void {
     this.importModal = false;
-    this.reload();
   }
 
   save(): void {

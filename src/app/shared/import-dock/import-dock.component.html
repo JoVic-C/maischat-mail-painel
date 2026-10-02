@@ -1,0 +1,35 @@
+<aside
+  *ngIf="job as j"
+  class="dock"
+  [class.ok]="j.phase === 'finished'"
+  [class.err]="j.phase === 'failed'"
+  [class.ready]="j.phase === 'done'"
+  aria-label="Importação de contatos"
+>
+  <div class="d-head">
+    <span class="d-dot" [class.pulse]="j.phase === 'validating' || j.phase === 'importing'" aria-hidden="true"></span>
+    <strong class="d-title" role="status" aria-live="polite">{{ title(j) }}</strong>
+    <button
+      *ngIf="closable(j)"
+      type="button"
+      class="d-close"
+      [attr.aria-label]="j.phase === 'done' ? 'Descartar importação' : 'Fechar aviso'"
+      [title]="j.phase === 'done' ? 'Descartar importação' : 'Fechar'"
+      (click)="close(j)"
+    >
+      ×
+    </button>
+  </div>
+
+  <p class="d-file" [title]="j.name">{{ j.name }}</p>
+
+  <div class="d-track" *ngIf="j.phase !== 'failed'" aria-hidden="true">
+    <div class="d-bar" [class.indeterminate]="percent(j) === null" [style.width.%]="percent(j)"></div>
+  </div>
+
+  <p class="d-count">{{ count(j) }}</p>
+  <p class="d-warn" *ngIf="j.reconnecting">Sem resposta do servidor. Tentando de novo…</p>
+  <p class="d-error" *ngIf="j.phase === 'failed'">{{ j.error || 'Falha ao processar a importação.' }}</p>
+
+  <button *ngIf="j.phase !== 'failed'" type="button" class="d-action" (click)="open(j)">{{ actionLabel(j) }}</button>
+</aside>

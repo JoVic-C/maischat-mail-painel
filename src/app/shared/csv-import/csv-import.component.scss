@@ -15,12 +15,13 @@
 
 .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
 
-.progress-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.progress-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 6px; }
+.progress-head .count { font-variant-numeric: tabular-nums; }
 .progress-title { font-weight: 700; font-size: 13px; color: var(--n); }
 .progress-track { height: 10px; background: var(--nl); border-radius: 6px; overflow: hidden; margin-bottom: 14px; }
 .progress-bar {
   height: 100%; background: linear-gradient(90deg, var(--o), var(--om));
-  transition: width 0.15s ease;
+  transition: width 0.4s ease;
 }
 
 .counters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }

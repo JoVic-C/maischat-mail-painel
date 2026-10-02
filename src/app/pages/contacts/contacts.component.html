@@ -168,5 +168,5 @@
   [dismissOnBackdrop]="false"
   (close)="closeImport()"
 >
-  <app-csv-import [lists]="lists" (finished)="onImported()" (cancel)="closeImport()"></app-csv-import>
+  <app-csv-import [lists]="lists" (finished)="onImported()" (cancel)="closeImport()" (minimize)="closeImport()"></app-csv-import>
 </app-modal>

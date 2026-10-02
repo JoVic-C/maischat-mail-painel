@@ -12,6 +12,8 @@ import type {
   Segment,
   SendingDomain,
   SendingDomainsOverview,
+  FormSubmission,
+  FormWebhook,
   SmtpServer,
   Template,
   TenantSummary,
@@ -171,6 +173,30 @@ export interface MockSeed {
   verifiedDomains?: Record<string, SendingDomain>;
   /** Devolvido no X-Session-Token de toda resposta, como a API faz ao renovar a sessão. */
   renewedToken?: string;
+  formWebhooks?: FormWebhook[];
+  formSubmissions?: Record<string, FormSubmission[]>;
+  /** Importações abertas no servidor, retomadas pelo painel ao carregar. */
+  openImports?: Record<string, unknown>[];
+}
+
+export function makeFormWebhook(over: Partial<FormWebhook> & { name: string }): FormWebhook {
+  const id = `fw-${over.name.toLowerCase().replace(/\W+/g, '-')}`;
+  return {
+    id,
+    templateId: 't-boas-vindas',
+    templateName: 'Boas vindas',
+    smtpId: null,
+    emailField: '',
+    nameField: '',
+    hourlyLimit: 100,
+    redirectUrl: '',
+    isActive: true,
+    url: `${API_ORIGIN}/api/hooks/forms/token-${id}`,
+    stats: { received: 0, sent: 0, failed: 0, rejected: 0 },
+    lastReceivedAt: null,
+    createdAt: ISO,
+    ...over,
+  };
 }
 
 /** Dublê da API com estado em memória, registro de chamadas e falhas forçadas por rota. */
@@ -187,6 +213,9 @@ export class ApiMock {
   sendingDomains: SendingDomainsOverview;
   verifiedDomains: Record<string, SendingDomain>;
   renewedToken?: string;
+  formWebhooks: FormWebhook[];
+  formSubmissions: Record<string, FormSubmission[]>;
+  openImports: Record<string, unknown>[];
 
   /** Fila de estados do job, consumida a cada consulta: testa a transição sem cronômetro. */
   importStates: Record<string, unknown>[] = [];
@@ -212,6 +241,9 @@ export class ApiMock {
     this.sendingDomains = seed.sendingDomains ?? { enforced: true, platformHosts: ['mail.maismail.com.br'], domains: [] };
     this.verifiedDomains = seed.verifiedDomains ?? {};
     this.renewedToken = seed.renewedToken;
+    this.formWebhooks = seed.formWebhooks ?? [];
+    this.formSubmissions = seed.formSubmissions ?? {};
+    this.openImports = seed.openImports ?? [];
   }
 
   fail(routeAlias: string, status: number, body: unknown): void {
@@ -276,7 +308,13 @@ export class ApiMock {
       return this.json(route, { contacts: this.contacts, total: this.contacts.length, page: 1, limit: 50 });
     }
     if (method === 'GET' && path === '/contacts/import/open') {
-      return this.json(route, []);
+      return this.json(route, this.openImports);
+    }
+    const cancelImportMatch = path.match(/^\/contacts\/import\/([^/]+)\/cancel$/);
+    if (method === 'POST' && cancelImportMatch) {
+      this.importStates = [{ id: cancelImportMatch[1], status: 'canceled', counters: {} }];
+      this.openImports = [];
+      return this.json(route, { message: 'Importação cancelada.' });
     }
     if (method === 'POST' && path === '/contacts/import') {
       if (await this.rejectIfFailing(route, 'startImport')) return;
@@ -314,9 +352,74 @@ export class ApiMock {
       return this.json(route, { html: String(body['html'] ?? ''), subject: String(body['subject'] ?? '') });
     }
     if (method === 'GET' && path === '/lists') return this.json(route, this.lists);
+    if (method === 'POST' && path === '/lists/save') {
+      if (await this.rejectIfFailing(route, 'saveList')) return;
+      const current = this.lists.find((l) => l._id === body['id']);
+      const list = current
+        ? ({ ...current, ...body, _id: current._id } as List)
+        : makeList({ name: String(body['name']), _id: `l-nova-${this.lists.length + 1}` });
+      this.lists = current ? this.lists.map((l) => (l._id === list._id ? list : l)) : [list, ...this.lists];
+      return this.json(route, { message: 'Lista salva.', list });
+    }
+    const listMatch = path.match(/^\/lists\/([^/]+)$/);
+    if (listMatch && method === 'GET') {
+      if (await this.rejectIfFailing(route, 'list')) return;
+      const list = this.lists.find((l) => l._id === listMatch[1]);
+      if (!list) return this.error(route, 404, 'Lista não encontrada.');
+      return this.json(route, list);
+    }
+    if (listMatch && method === 'DELETE') {
+      if (await this.rejectIfFailing(route, 'deleteList')) return;
+      this.lists = this.lists.filter((l) => l._id !== listMatch[1]);
+      return this.json(route, null, 204);
+    }
+    if (method === 'GET' && path === '/contacts/export') {
+      await route.fulfill({ status: 200, headers: { ...CORS_HEADERS, 'content-type': 'text/csv' }, body: 'email\n' });
+      return;
+    }
     if (method === 'GET' && path === '/segments') return this.json(route, this.segments);
     if (method === 'GET' && path === '/smtp') return this.json(route, this.smtps);
     if (method === 'GET' && path === '/tenants') return this.json(route, this.tenants);
+
+    if (method === 'GET' && path === '/form-webhooks') {
+      if (await this.rejectIfFailing(route, 'formWebhooks')) return;
+      return this.json(route, this.formWebhooks);
+    }
+    if (method === 'POST' && path === '/form-webhooks/save') {
+      if (await this.rejectIfFailing(route, 'saveFormWebhook')) return;
+      const id = body['id'] as string | undefined;
+      const template = this.templates.find((t) => t._id === body['templateId']);
+      const current = id ? this.formWebhooks.find((w) => w.id === id) : undefined;
+      const webhook = {
+        ...(current ?? makeFormWebhook({ name: String(body['name']), id: `fw-novo-${this.formWebhooks.length + 1}` })),
+        ...body,
+        id: current?.id ?? `fw-novo-${this.formWebhooks.length + 1}`,
+        templateName: template?.name ?? '',
+      } as FormWebhook;
+      this.formWebhooks = current
+        ? this.formWebhooks.map((w) => (w.id === webhook.id ? webhook : w))
+        : [webhook, ...this.formWebhooks];
+      return this.json(route, { message: 'Webhook salvo.', webhook });
+    }
+    const formHookMatch = path.match(/^\/form-webhooks\/([^/]+)(?:\/(regenerate|submissions))?$/);
+    if (formHookMatch) {
+      const [, hookId, action] = formHookMatch;
+      const current = this.formWebhooks.find((w) => w.id === hookId);
+      if (!current) return this.error(route, 404, 'Webhook não encontrado.');
+      if (method === 'GET' && action === 'submissions') {
+        if (await this.rejectIfFailing(route, 'formSubmissions')) return;
+        return this.json(route, this.formSubmissions[hookId] ?? []);
+      }
+      if (method === 'POST' && action === 'regenerate') {
+        const webhook = { ...current, url: `${current.url}-nova` };
+        this.formWebhooks = this.formWebhooks.map((w) => (w.id === hookId ? webhook : w));
+        return this.json(route, { message: 'Nova URL gerada. A anterior deixou de funcionar.', webhook });
+      }
+      if (method === 'DELETE' && !action) {
+        this.formWebhooks = this.formWebhooks.filter((w) => w.id !== hookId);
+        return this.json(route, null, 204);
+      }
+    }
 
     if (method === 'GET' && path === '/sending-domains') {
       if (await this.rejectIfFailing(route, 'sendingDomains')) return;

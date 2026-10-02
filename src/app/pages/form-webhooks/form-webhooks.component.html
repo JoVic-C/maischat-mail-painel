@@ -1,0 +1,273 @@
+<div class="row-between">
+  <app-page-title subtitle="Email automático para quem preenche o formulário do seu site">Formulários</app-page-title>
+  <app-button variant="primary" [disabled]="!templates.length" (click)="openCreate()">+ Novo webhook</app-button>
+</div>
+
+<div class="note" *ngIf="templatesLoaded && !templates.length">
+  <span class="ico" aria-hidden="true">✉️</span>
+  <div>
+    <strong>Crie um template antes</strong>
+    Cada webhook envia um template do mMail. Crie o email em <b>Templates</b> e volte aqui.
+  </div>
+</div>
+
+<app-data-state
+  [loading]="loading"
+  [error]="error"
+  [empty]="!webhooks.length"
+  emptyText="Nenhum webhook ainda. Crie um para cada formulário que deve responder por email."
+  [skeletonCols]="4"
+  (retry)="load()"
+>
+  <section
+    class="card hook"
+    *ngFor="let w of webhooks; trackBy: trackById"
+    [class.paused]="!w.isActive"
+    [attr.data-webhook]="w.name"
+  >
+    <header class="h-head">
+      <div class="h-title">
+        <h2>{{ w.name }}</h2>
+        <p class="muted">
+          Template: {{ w.templateName || '—' }} ·
+          {{ w.lastReceivedAt ? 'último envio recebido em ' + (w.lastReceivedAt | date: 'dd/MM/yyyy HH:mm') : 'nada recebido ainda' }}
+        </p>
+      </div>
+      <div class="h-actions">
+        <span class="badge" [class.green]="w.isActive" [class.gray]="!w.isActive">{{ w.isActive ? 'ativo' : 'pausado' }}</span>
+        <app-button variant="outline" size="sm" (click)="openGuide(w)">como usar</app-button>
+        <app-button variant="outline" size="sm" (click)="openHistory(w)">histórico</app-button>
+        <app-row-menu [label]="'Ações do webhook ' + w.name">
+          <button class="menu-item" type="button" (click)="openEdit(w)">Editar</button>
+          <button class="menu-item" type="button" (click)="toggleActive(w)">{{ w.isActive ? 'Pausar' : 'Ativar' }}</button>
+          <button class="menu-item" type="button" (click)="regenerate(w)">Gerar nova URL</button>
+          <div class="menu-sep"></div>
+          <button class="menu-item danger" type="button" (click)="remove(w)">Excluir</button>
+        </app-row-menu>
+      </div>
+    </header>
+
+    <div class="h-url">
+      <code>{{ w.url }}</code>
+      <app-button variant="outline" size="sm" (click)="copy(w.url)">copiar URL</app-button>
+    </div>
+
+    <dl class="h-stats">
+      <div>
+        <dt>recebidos</dt>
+        <dd>{{ w.stats.received }}</dd>
+      </div>
+      <div>
+        <dt>enviados</dt>
+        <dd class="ok">{{ w.stats.sent }}</dd>
+      </div>
+      <div>
+        <dt>recusados</dt>
+        <dd [class.warn]="w.stats.rejected">{{ w.stats.rejected }}</dd>
+      </div>
+      <div>
+        <dt>falhas</dt>
+        <dd [class.bad]="w.stats.failed">{{ w.stats.failed }}</dd>
+      </div>
+    </dl>
+  </section>
+</app-data-state>
+
+<app-modal
+  *ngIf="modal"
+  [title]="editingId ? 'Editar webhook' : 'Novo webhook'"
+  size="lg"
+  [busy]="saving"
+  (close)="modal = false"
+>
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <p class="error-msg" *ngIf="formError">{{ formError }}</p>
+
+    <div class="rw">
+      <div class="ff">
+        <label for="fw-name">Nome *</label>
+        <input id="fw-name" formControlName="name" placeholder="Orçamento do site" [class.is-invalid]="serverErrors.has('name')" />
+        <div class="field-error" *ngIf="fieldError('name')">{{ fieldError('name') }}</div>
+      </div>
+      <div class="ff">
+        <label for="fw-template">Template do email *</label>
+        <select id="fw-template" formControlName="templateId" [class.is-invalid]="serverErrors.has('templateId')">
+          <option value="">— selecione —</option>
+          <option *ngFor="let t of templates" [value]="t._id">{{ t.name }}</option>
+        </select>
+        <div class="field-error" *ngIf="fieldError('templateId')">{{ fieldError('templateId') }}</div>
+      </div>
+    </div>
+
+    <div class="rw">
+      <div class="ff">
+        <label for="fw-smtp">Servidor SMTP</label>
+        <select id="fw-smtp" formControlName="smtpId">
+          <option [ngValue]="null">— usar o padrão —</option>
+          <option *ngFor="let s of smtps" [ngValue]="s.id">{{ s.name }}</option>
+        </select>
+      </div>
+      <div class="ff">
+        <label for="fw-limit">Limite de envios por hora *</label>
+        <input id="fw-limit" type="number" min="1" max="5000" formControlName="hourlyLimit" [class.is-invalid]="serverErrors.has('hourlyLimit')" />
+        <div class="field-error" *ngIf="fieldError('hourlyLimit')">{{ fieldError('hourlyLimit') }}</div>
+      </div>
+    </div>
+
+    <div class="ff">
+      <label for="fw-redirect">Página de obrigado</label>
+      <input
+        id="fw-redirect"
+        formControlName="redirectUrl"
+        placeholder="https://seusite.com.br/obrigado"
+        [class.is-invalid]="serverErrors.has('redirectUrl')"
+      />
+      <div class="field-error" *ngIf="fieldError('redirectUrl')">{{ fieldError('redirectUrl') }}</div>
+      <p class="hint sub">Só para formulário HTML sem JavaScript: depois do envio, a pessoa é levada para esta página.</p>
+    </div>
+
+    <details class="adv" [open]="!!form.value.emailField || !!form.value.nameField">
+      <summary>Campos do formulário (opcional)</summary>
+      <p class="hint">O mMail encontra o email e o nome sozinho. Preencha só se o seu formulário usa outros nomes de campo.</p>
+      <div class="rw">
+        <div class="ff">
+          <label for="fw-email-field">Campo do email</label>
+          <input id="fw-email-field" formControlName="emailField" placeholder="email_contato" />
+        </div>
+        <div class="ff">
+          <label for="fw-name-field">Campo do nome</label>
+          <input id="fw-name-field" formControlName="nameField" placeholder="nome_completo" />
+        </div>
+      </div>
+    </details>
+
+    <label class="check-line">
+      <input type="checkbox" formControlName="isActive" />
+      Webhook ativo
+    </label>
+  </form>
+
+  <ng-container modal-actions>
+    <app-button variant="outline" (click)="modal = false">Cancelar</app-button>
+    <app-button variant="primary" [loading]="saving" (click)="save()">{{ editingId ? 'Salvar' : 'Criar webhook' }}</app-button>
+  </ng-container>
+</app-modal>
+
+<app-modal *ngIf="historyFor" [title]="'Histórico · ' + historyFor.name" size="xl" (close)="historyFor = null">
+  <p class="hint">Últimos 50 envios recebidos. Ficam guardados por 90 dias.</p>
+  <app-data-state
+    [loading]="historyLoading"
+    [error]="historyError"
+    [empty]="!history.length"
+    emptyText="Nenhum envio recebido ainda. Preencha o formulário do site para testar."
+    [skeletonCols]="4"
+    (retry)="loadHistory()"
+  >
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Recebido em</th>
+            <th>Email</th>
+            <th>Situação</th>
+            <th>Detalhes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of history">
+            <td class="muted nowrap">{{ s.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+            <td>
+              {{ s.email || '—' }}
+              <div class="muted" *ngIf="s.name">{{ s.name }}</div>
+            </td>
+            <td>
+              <span
+                class="badge"
+                [class.green]="s.status === 'sent'"
+                [class.gray]="s.status === 'queued'"
+                [class.red]="s.status === 'failed'"
+                [class.yellow]="s.status === 'rejected'"
+                >{{ statusLabels[s.status] }}</span
+              >
+            </td>
+            <td>
+              <p class="reason" *ngIf="s.reason">{{ s.reason }}</p>
+              <details class="fields" *ngIf="fieldsOf(s).length">
+                <summary>{{ fieldsOf(s).length }} campos recebidos</summary>
+                <dl>
+                  <div *ngFor="let f of fieldsOf(s)">
+                    <dt>{{ f.key }}</dt>
+                    <dd>{{ f.value }}</dd>
+                  </div>
+                </dl>
+              </details>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </app-data-state>
+
+  <ng-container modal-actions>
+    <app-button variant="outline" [loading]="historyLoading" (click)="loadHistory()">Atualizar</app-button>
+    <app-button variant="primary" (click)="historyFor = null">Fechar</app-button>
+  </ng-container>
+</app-modal>
+
+<app-modal *ngIf="guideFor" [title]="'Como usar · ' + guideFor.name" size="lg" (close)="guideFor = null">
+  <p class="hint">Envie os dados do formulário com <b>POST</b> para a URL abaixo. Aceita JSON, formulário comum e multipart.</p>
+  <div class="h-url">
+    <code>{{ guideFor.url }}</code>
+    <app-button variant="outline" size="sm" (click)="copy(guideFor.url)">copiar URL</app-button>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="Formas de integrar">
+    <button type="button" role="tab" [attr.aria-selected]="guideTab === 'html'" [class.active]="guideTab === 'html'" (click)="guideTab = 'html'">
+      HTML
+    </button>
+    <button type="button" role="tab" [attr.aria-selected]="guideTab === 'js'" [class.active]="guideTab === 'js'" (click)="guideTab = 'js'">
+      JavaScript
+    </button>
+    <button
+      type="button"
+      role="tab"
+      [attr.aria-selected]="guideTab === 'ferramentas'"
+      [class.active]="guideTab === 'ferramentas'"
+      (click)="guideTab = 'ferramentas'"
+    >
+      Ferramentas
+    </button>
+  </div>
+
+  <div class="tab-panel" role="tabpanel" *ngIf="guideTab === 'html'">
+    <pre><code>{{ htmlSnippet(guideFor.url) }}</code></pre>
+    <app-button variant="outline" size="sm" (click)="copy(htmlSnippet(guideFor.url), 'Código copiado.')">copiar código</app-button>
+    <p class="hint sub">O campo <code>_gotcha</code> fica escondido: robôs o preenchem e são descartados sem enviar nada.</p>
+  </div>
+
+  <div class="tab-panel" role="tabpanel" *ngIf="guideTab === 'js'">
+    <pre><code>{{ jsSnippet(guideFor.url) }}</code></pre>
+    <app-button variant="outline" size="sm" (click)="copy(jsSnippet(guideFor.url), 'Código copiado.')">copiar código</app-button>
+  </div>
+
+  <div class="tab-panel" role="tabpanel" *ngIf="guideTab === 'ferramentas'">
+    <ul class="steps">
+      <li><b>Elementor:</b> em <i>Ações após o envio</i>, adicione <i>Webhook</i> e cole a URL.</li>
+      <li><b>RD Station, Typeform, Google Forms:</b> use a integração de webhook da ferramenta, ou Zapier/Make com uma ação <i>POST</i> para a URL.</li>
+      <li><b>WordPress (Contact Form 7, WPForms):</b> um plugin de webhook, apontando para a URL.</li>
+    </ul>
+    <p class="hint sub">Depois do primeiro envio, confira no histórico quais campos chegaram.</p>
+  </div>
+
+  <div class="vars">
+    <strong>Variáveis no template</strong>
+    <p class="hint">
+      Cada campo do formulário vira uma variável com o mesmo nome: <code>{{ '{{nome}}' }}</code>, <code>{{ '{{telefone}}' }}</code>.
+      Acentos e espaços viram <code>_</code>: "Número de funcionários" vira <code>{{ '{{numero_de_funcionarios}}' }}</code>.
+    </p>
+  </div>
+
+  <ng-container modal-actions>
+    <app-button variant="primary" (click)="guideFor = null">Fechar</app-button>
+  </ng-container>
+</app-modal>

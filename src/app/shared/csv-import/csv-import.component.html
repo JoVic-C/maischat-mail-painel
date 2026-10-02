@@ -49,32 +49,46 @@
         <ng-container *ngSwitchDefault>Importação concluída</ng-container>
       </ng-container>
     </span>
-    <span class="muted">
+    <span class="muted count" aria-live="polite">
       <ng-container *ngIf="phase === 'importing' || phase === 'finished'">
-        {{ imported }} gravado(s)
+        {{ processedCount | number }} de {{ importableCount | number }} gravados
       </ng-container>
       <ng-container *ngIf="phase !== 'importing' && phase !== 'finished'">
-        {{ counters.rows }} linha(s)
+        {{ counters.rows | number }} {{ counters.rows === 1 ? 'linha verificada' : 'linhas verificadas' }}
       </ng-container>
     </span>
   </div>
 
-  <!-- Indeterminada: o total de linhas só é conhecido no fim da leitura. -->
-  <div class="progress-track" role="progressbar" [attr.aria-busy]="busy">
-    <div class="progress-bar" [class.indeterminate]="busy" [class.full]="!busy"></div>
+  <!-- Na validação o total de linhas só é conhecido no fim da leitura: a barra fica indeterminada. -->
+  <div
+    class="progress-track"
+    role="progressbar"
+    [attr.aria-busy]="busy"
+    [attr.aria-valuenow]="phase === 'importing' ? importPercent : null"
+    aria-valuemin="0"
+    aria-valuemax="100"
+  >
+    <div
+      class="progress-bar"
+      [class.indeterminate]="phase === 'validating'"
+      [class.full]="!busy"
+      [style.width.%]="phase === 'importing' ? importPercent : null"
+    ></div>
   </div>
+
+  <p class="hint warn" *ngIf="reconnecting && busy">Sem resposta do servidor. Tentando de novo…</p>
 
   <p class="hint file-line" *ngIf="jobName">
     <b>{{ jobName }}</b>
-    <span class="muted" *ngIf="busy"> — pode fechar esta janela, a importação continua no servidor.</span>
+    <span class="muted" *ngIf="busy"> — pode minimizar e continuar usando o sistema; a importação segue no servidor.</span>
   </p>
   <div class="counters">
-    <div class="stat"><div class="v ok">{{ counters.new }}</div><div class="k">✅ Novos</div></div>
-    <div class="stat"><div class="v warn">{{ counters.addToList }}</div><div class="k">➕ + à lista</div></div>
-    <div class="stat"><div class="v soft">{{ ignoredCount }}</div><div class="k">⏭️ Ignorados</div></div>
-    <div class="stat"><div class="v bad">{{ counters.invalid }}</div><div class="k">❌ Incorretos</div></div>
+    <div class="stat"><div class="v ok">{{ counters.new | number }}</div><div class="k">✅ Novos</div></div>
+    <div class="stat"><div class="v warn">{{ counters.addToList | number }}</div><div class="k">➕ + à lista</div></div>
+    <div class="stat"><div class="v soft">{{ ignoredCount | number }}</div><div class="k">⏭️ Ignorados</div></div>
+    <div class="stat"><div class="v bad">{{ counters.invalid | number }}</div><div class="k">❌ Incorretos</div></div>
   </div>
-  <div class="ff live" *ngIf="phase !== 'finished'">
+  <div class="ff live" *ngIf="phase === 'validating' || phase === 'done'">
     <label>Primeiros contatos do arquivo</label>
     <div class="live-box">
       <table class="tbl" *ngIf="sample.length">
@@ -89,12 +103,13 @@
       </table>
       <app-empty-state *ngIf="!sample.length">Aguardando primeiros resultados…</app-empty-state>
     </div>
-    <p *ngIf="counters.rows > sample.length" class="muted">
-      Amostra das primeiras {{ sample.length }} de {{ counters.rows }} linhas lidas.
+    <p *ngIf="sample.length && counters.rows > sample.length" class="muted">
+      Amostra das primeiras {{ sample.length | number }} de {{ counters.rows | number }} linhas verificadas.
     </p>
   </div>
   <div class="actions" *ngIf="busy">
-    <app-button variant="outline" (click)="cancelJob()">Cancelar</app-button>
+    <app-button variant="outline" (click)="cancelJob()">Cancelar importação</app-button>
+    <app-button variant="primary" (click)="minimize.emit()">Minimizar</app-button>
   </div>
   <div *ngIf="phase === 'done'">
     <app-empty-state *ngIf="!counters.rows">Nenhum contato encontrado no arquivo.</app-empty-state>

@@ -1,22 +1,12 @@
 import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
-import { Subscription, switchMap, timer } from 'rxjs';
-import { ImportCounters, ImportJob, ImportSampleRow, List } from '../../models';
+import { Subscription } from 'rxjs';
+import { ImportCounters, ImportSampleRow, List } from '../../models';
 import { ApiService } from '../../services/api.service';
+import { emptyCounters, ImportTrackerService, TrackedImport } from '../../services/import-tracker.service';
 import { ToastService } from '../toast/toast.service';
 
-/** Backoff do polling: a cota da API (200 req/15 min por IP) acabava com intervalo fixo. */
-const POLL_INICIAL_MS = 1200;
-
-const POLL_MAX_MS = 10_000;
-
-const POLL_FATOR = 1.6;
-
-function emptyCounters(): ImportCounters {
-  return { rows: 0, new: 0, addToList: 0, inList: 0, already: 0, invalid: 0 };
-}
-
-/** O arquivo é processado por um worker no servidor; esta tela só acompanha contadores. */
+/** O arquivo é processado por um worker no servidor; esta tela mostra o que o acompanhamento global recebe. */
 @Component({
   selector: 'app-csv-import',
   templateUrl: './csv-import.component.html',
@@ -32,6 +22,8 @@ export class CsvImportComponent implements OnInit, OnDestroy {
 
   @Output() finished = new EventEmitter<{ imported: number }>();
   @Output() cancel = new EventEmitter<void>();
+  /** Fecha a janela e deixa o progresso no canto da tela. */
+  @Output() minimize = new EventEmitter<void>();
 
   form: FormGroup;
   /**
@@ -49,6 +41,7 @@ export class CsvImportComponent implements OnInit, OnDestroy {
   sample: ImportSampleRow[] = [];
   imported = 0;
   skipped = 0;
+  reconnecting = false;
 
   file: File | null = null;
   uploading = false;
@@ -56,14 +49,12 @@ export class CsvImportComponent implements OnInit, OnDestroy {
   /** Lista com que a validação foi feita — trocar de lista invalida o resultado. */
   validatedListId = '';
 
-  private poll?: Subscription;
-  /** Impede reagendar depois que o job terminou. */
-  private pollAtivo = false;
-  private intervaloPoll = POLL_INICIAL_MS;
+  private stateSub?: Subscription;
 
   constructor(
     private api: ApiService,
     private toast: ToastService,
+    private tracker: ImportTrackerService,
     private fb: FormBuilder
   ) {
     this.form = this.fb.group({ csv: [''], listId: [''] });
@@ -71,12 +62,16 @@ export class CsvImportComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     if (this.fixedListId) this.form.patchValue({ listId: this.fixedListId });
-    this.resumeOpenImport();
+    this.tracker.attach();
+    this.stateSub = this.tracker.state$.subscribe((state) => this.applyState(state));
+    // Destino travado não retoma: o job mais recente pode ser de outra lista.
+    if (!this.tracker.current && !this.fixedListId) this.tracker.resumeOpen();
   }
 
   ngOnDestroy(): void {
-    // Só para de acompanhar; o job continua no servidor.
-    this.stopPolling();
+    // Só deixa de mostrar; o acompanhamento continua no cartão do canto.
+    this.stateSub?.unsubscribe();
+    this.tracker.detach();
   }
 
   get importListId(): string {
@@ -93,6 +88,16 @@ export class CsvImportComponent implements OnInit, OnDestroy {
 
   get ignoredCount(): number {
     return this.counters.inList + this.counters.already;
+  }
+
+  get processedCount(): number {
+    return this.imported + this.skipped;
+  }
+
+  /** Na gravação o total é conhecido; na validação não, e a barra fica indeterminada. */
+  get importPercent(): number {
+    if (!this.importableCount) return 0;
+    return Math.min(100, Math.round((this.processedCount / this.importableCount) * 100));
   }
 
   get busy(): boolean {
@@ -133,16 +138,12 @@ export class CsvImportComponent implements OnInit, OnDestroy {
     const filename = this.file?.name ?? 'contatos-colados.csv';
 
     this.uploading = true;
-    this.resetProgress();
     this.validatedListId = this.importListId;
 
     this.api.startImport(blob, filename, this.listIds).subscribe({
       next: (res) => {
         this.uploading = false;
-        this.jobId = res.id;
-        this.jobName = filename;
-        this.phase = 'validating';
-        this.startPolling();
+        this.tracker.track(res.id, filename);
       },
       error: (err) => {
         this.uploading = false;
@@ -155,7 +156,7 @@ export class CsvImportComponent implements OnInit, OnDestroy {
     if (!this.jobId || !this.importableCount) return;
     this.phase = 'importing';
     this.api.confirmImport(this.jobId, this.listIds).subscribe({
-      next: () => this.startPolling(),
+      next: () => this.tracker.continueAs('importing'),
       error: (err) => {
         this.phase = 'done';
         this.toast.apiError(err);
@@ -169,19 +170,16 @@ export class CsvImportComponent implements OnInit, OnDestroy {
       return;
     }
     this.api.cancelImport(this.jobId).subscribe({
-      next: () => {
-        this.stopPolling();
-        this.resetProgress();
-        this.phase = 'form';
-      },
+      next: () => this.tracker.clear(),
       error: (err) => this.toast.apiError(err),
     });
   }
 
+  /** A validação antiga é descartada no servidor, senão voltaria a ser retomada depois. */
   revalidate(): void {
-    this.stopPolling();
-    this.resetProgress();
-    this.phase = 'form';
+    const staleId = this.jobId;
+    if (staleId) this.api.cancelImport(staleId).subscribe({ error: () => undefined });
+    this.tracker.clear();
   }
 
   downloadInvalid(): void {
@@ -210,91 +208,45 @@ export class CsvImportComponent implements OnInit, OnDestroy {
     return row.reason ?? '';
   }
 
-  /** Retoma uma importação deixada em aberto (modal fechado, página recarregada). */
-  private resumeOpenImport(): void {
-    this.api.getOpenImports().subscribe({
-      next: (open) => {
-        // Destino travado não retoma: o job mais recente pode ser de outra lista.
-        const job = this.fixedListId ? undefined : open[0];
-        if (!job || this.jobId) return;
-        this.jobId = job.id;
-        this.jobName = job.originalName;
-        this.phase = job.status === 'importing' ? 'importing' : 'validating';
-        this.startPolling();
-      },
-      // Falhar aqui não impede começar uma importação nova: segue em silêncio.
-      error: () => undefined,
-    });
-  }
+  private applyState(state: TrackedImport | null): void {
+    if (!state) {
+      if (this.phase !== 'form') this.resetProgress();
+      this.phase = 'form';
+      return;
+    }
+    // O wizard de uma lista nova não assume a importação de outra lista.
+    if (this.fixedListId && state.listIds.length && !state.listIds.includes(this.fixedListId)) return;
 
-  private startPolling(): void {
-    this.stopPolling();
-    this.pollAtivo = true;
-    this.intervaloPoll = POLL_INICIAL_MS;
-    this.consultarProgresso(0);
-  }
+    this.jobId = state.id;
+    this.jobName = state.name;
+    this.counters = state.counters;
+    this.sample = state.sample;
+    this.imported = state.imported;
+    this.skipped = state.skipped;
+    this.reconnecting = state.reconnecting;
+    if (state.listIds.length) this.validatedListId = state.listIds[0];
 
-  private consultarProgresso(atraso: number): void {
-    this.poll = timer(atraso)
-      .pipe(switchMap(() => this.api.getImport(this.jobId)))
-      .subscribe({
-        next: (job) => {
-          this.applyJob(job);
-          // applyJob encerra o acompanhamento quando o job chega ao fim.
-          if (!this.pollAtivo) return;
-          // Agenda antes de crescer, para a primeira espera ser POLL_INICIAL_MS.
-          const proxima = this.intervaloPoll;
-          this.intervaloPoll = Math.min(this.intervaloPoll * POLL_FATOR, POLL_MAX_MS);
-          this.consultarProgresso(proxima);
-        },
-        error: (err) => {
-          this.stopPolling();
-          this.toast.apiError(err);
-        },
-      });
-  }
-
-  private stopPolling(): void {
-    this.pollAtivo = false;
-    this.poll?.unsubscribe();
-    this.poll = undefined;
-  }
-
-  private applyJob(job: ImportJob): void {
-    this.counters = job.counters ?? emptyCounters();
-    this.sample = job.sample ?? [];
-    this.imported = job.imported ?? 0;
-    this.skipped = job.skipped ?? 0;
-    if (job.originalName) this.jobName = job.originalName;
-    // Vale a lista do servidor, inclusive ao retomar um job iniciado em outra aba.
-    this.validatedListId = job.listIds?.[0] ?? '';
-    if (!this.fixedListId && this.busy) this.form.patchValue({ listId: this.validatedListId }, { emitEvent: false });
-
-    switch (job.status) {
-      case 'validated':
-        this.stopPolling();
-        this.phase = 'done';
+    switch (state.phase) {
+      case 'validating':
+      case 'importing':
+        this.phase = state.phase;
+        if (!this.fixedListId) this.form.patchValue({ listId: this.validatedListId }, { emitEvent: false });
         break;
       case 'done':
-        this.stopPolling();
+        if (this.phase !== 'done' && !this.fixedListId) {
+          this.form.patchValue({ listId: this.validatedListId }, { emitEvent: false });
+        }
+        this.phase = 'done';
+        break;
+      case 'finished':
         this.phase = 'finished';
-        this.toast.success(`${this.imported} contato(s) importado(s).`);
-        this.finished.emit({ imported: this.imported });
+        this.finished.emit({ imported: state.imported });
+        // Fora da notificação atual, para os outros ouvintes não receberem um estado velho.
+        queueMicrotask(() => this.tracker.clear());
         break;
       case 'failed':
-        this.stopPolling();
-        this.phase = 'form';
-        this.toast.error(job.error || 'Falha ao processar a importação.');
+        queueMicrotask(() => this.tracker.clear());
         break;
-      case 'canceled':
-        this.stopPolling();
-        this.phase = 'form';
-        break;
-      case 'importing':
-        this.phase = 'importing';
-        break;
-      default:
-        this.phase = 'validating';
     }
   }
 
@@ -305,5 +257,6 @@ export class CsvImportComponent implements OnInit, OnDestroy {
     this.sample = [];
     this.imported = 0;
     this.skipped = 0;
+    this.reconnecting = false;
   }
 }

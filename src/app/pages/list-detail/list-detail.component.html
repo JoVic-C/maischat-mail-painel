@@ -1,0 +1,137 @@
+<a class="back" routerLink="/lists">← Listas</a>
+
+<app-data-state
+  [loading]="listLoading"
+  [error]="listError"
+  [empty]="!list"
+  emptyText="Lista não encontrada."
+  [skeletonCols]="3"
+  (retry)="loadList()"
+>
+  <ng-container *ngIf="list">
+    <div class="row-between head">
+      <div class="title">
+        <app-page-title [subtitle]="list.description">{{ list.name }}</app-page-title>
+        <div class="meta">
+          <app-status-badge kind="listType" [value]="list.type"></app-status-badge>
+          <span class="muted">{{ list.contactCount }} {{ list.contactCount === 1 ? 'contato' : 'contatos' }}</span>
+          <span class="muted" *ngIf="list.tags.length">· {{ list.tags.join(', ') }}</span>
+        </div>
+      </div>
+
+      <div class="head-actions">
+        <app-button variant="outline" (click)="openEdit()">editar</app-button>
+        <app-button
+          variant="outline"
+          [disabled]="!list.contactCount"
+          [loading]="exporting"
+          [title]="list.contactCount ? 'Baixar os contatos desta lista em CSV' : 'Lista vazia'"
+          (click)="exportar()"
+        >
+          exportar
+        </app-button>
+        <app-button variant="danger" (click)="deleteModal = true">excluir</app-button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <input
+          type="search"
+          class="search"
+          placeholder="Buscar contato nesta lista"
+          aria-label="Buscar contato nesta lista"
+          [value]="search"
+          (input)="onSearch($any($event.target).value)"
+        />
+      </div>
+
+      <app-data-state
+        [loading]="loading"
+        [error]="error"
+        [empty]="!contacts.length"
+        [emptyText]="emptyText"
+        [skeletonCols]="5"
+        (retry)="loadContacts()"
+      >
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Nome</th>
+                <th>Empresa</th>
+                <th>Situação</th>
+                <th>Recebeu</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let c of contacts">
+                <td class="email">{{ c.email }}</td>
+                <td>{{ c.name || '—' }}</td>
+                <td class="muted">{{ c.company || '—' }}</td>
+                <td><app-status-badge kind="contact" [value]="c.status"></app-status-badge></td>
+                <td class="muted">{{ c.lastDeliveredAt ? '✓ ' + (c.lastDeliveredAt | date: 'dd/MM/yyyy') : '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <app-paginator [page]="page" [total]="total" [limit]="limit" (pageChange)="goToPage($event)"></app-paginator>
+      </app-data-state>
+    </div>
+  </ng-container>
+</app-data-state>
+
+<app-modal *ngIf="editModal && list" title="Editar lista" size="md" [busy]="saving" (close)="editModal = false">
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <p class="error-msg" *ngIf="formError">{{ formError }}</p>
+
+    <div class="ff">
+      <label for="ld-name">Nome *</label>
+      <input id="ld-name" formControlName="name" [class.is-invalid]="serverErrors.has('name')" />
+      <div class="field-error" *ngIf="fieldError('name')">{{ fieldError('name') }}</div>
+    </div>
+
+    <div class="ff">
+      <label for="ld-desc">Descrição</label>
+      <input id="ld-desc" formControlName="description" placeholder="Opcional" />
+    </div>
+
+    <div class="ff">
+      <label for="ld-type">Tipo</label>
+      <select id="ld-type" formControlName="type">
+        <option value="private">Privada</option>
+        <option value="public">Pública</option>
+      </select>
+    </div>
+  </form>
+
+  <ng-container modal-actions>
+    <app-button variant="outline" (click)="editModal = false">Cancelar</app-button>
+    <app-button variant="primary" [loading]="saving" (click)="save()">Salvar alterações</app-button>
+  </ng-container>
+</app-modal>
+
+<app-modal
+  *ngIf="deleteModal && list"
+  title="Excluir lista"
+  variant="danger"
+  size="sm"
+  [busy]="deleting"
+  (close)="deleteModal = false"
+>
+  <p>
+    Tem certeza que deseja excluir a lista <b>"{{ list.name }}"</b>?
+  </p>
+  <p class="hint" *ngIf="list.contactCount">
+    Ela tem <b>{{ list.contactCount }}</b> contato(s). Os contatos <b>não</b> serão apagados, apenas deixam de pertencer
+    a esta lista.
+  </p>
+  <p class="hint" *ngIf="!list.contactCount">Esta ação não pode ser desfeita.</p>
+
+  <ng-container modal-actions>
+    <app-button variant="outline" (click)="deleteModal = false">Cancelar</app-button>
+    <app-button variant="danger" [loading]="deleting" (click)="confirmDelete()">Excluir lista</app-button>
+  </ng-container>
+</app-modal>

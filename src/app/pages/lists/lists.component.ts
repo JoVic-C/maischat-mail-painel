@@ -1,16 +1,18 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { List, SaveListInput } from '../../models';
 import { ApiService } from '../../services/api.service';
-import { baixarBlob } from '../../shared/download';
+import { ImportTrackerService } from '../../services/import-tracker.service';
 import { apiErrorMessage, ServerErrorsHandler } from '../../shared/server-errors/server-errors';
 import { ToastService } from '../../shared/toast/toast.service';
 
 @Component({
-    selector: 'app-lists',
-    templateUrl: './lists.component.html',
-    styleUrls: ['./lists.component.scss'],
-    standalone: false
+  selector: 'app-lists',
+  templateUrl: './lists.component.html',
+  styleUrls: ['./lists.component.scss'],
+  standalone: false,
 })
 export class ListsComponent implements OnInit, OnDestroy {
   lists: List[] = [];
@@ -20,8 +22,6 @@ export class ListsComponent implements OnInit, OnDestroy {
   modal = false;
   saving = false;
   resyncing = false;
-  deleteTarget: List | null = null;
-  deleting = false;
 
   wizardStep: 1 | 2 = 1;
   createdList: List | null = null;
@@ -29,7 +29,6 @@ export class ListsComponent implements OnInit, OnDestroy {
   form: FormGroup;
   formError = '';
   serverErrors: ServerErrorsHandler;
-  editingId: string | null = null;
 
   private readonly FIELD_LABELS: Record<string, string> = {
     name: 'Nome',
@@ -46,9 +45,13 @@ export class ListsComponent implements OnInit, OnDestroy {
     return this.serverErrors.messageFor(field, this.LOCAL_ERRORS);
   }
 
+  private finishedSub?: Subscription;
+
   constructor(
     private api: ApiService,
     private toast: ToastService,
+    private router: Router,
+    private tracker: ImportTrackerService,
     private fb: FormBuilder
   ) {
     this.form = this.fb.group({
@@ -61,9 +64,12 @@ export class ListsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.load();
+    // Importação minimizada que terminou: os contadores de contatos mudaram.
+    this.finishedSub = this.tracker.finished$.subscribe(() => this.load());
   }
 
   ngOnDestroy(): void {
+    this.finishedSub?.unsubscribe();
     this.serverErrors.destroy();
   }
 
@@ -82,8 +88,11 @@ export class ListsComponent implements OnInit, OnDestroy {
     });
   }
 
+  open(list: List): void {
+    this.router.navigate(['/lists', list._id]);
+  }
+
   openCreate(): void {
-    this.editingId = null;
     this.createdList = null;
     this.wizardStep = 1;
     this.formError = '';
@@ -92,21 +101,10 @@ export class ListsComponent implements OnInit, OnDestroy {
     this.modal = true;
   }
 
-  openEdit(list: List): void {
-    this.editingId = list._id;
-    this.createdList = null;
-    this.wizardStep = 1;
-    this.formError = '';
-    this.serverErrors.clear();
-    this.form.reset({ name: list.name, description: list.description, type: list.type });
-    this.modal = true;
-  }
-
   closeWizard(): void {
     this.modal = false;
     this.wizardStep = 1;
     this.createdList = null;
-    this.editingId = null;
   }
 
   submit(): void {
@@ -116,23 +114,16 @@ export class ListsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const editing = !!this.editingId;
     const payload: SaveListInput = { ...this.form.value };
-    if (this.editingId) payload.id = this.editingId;
-
     this.saving = true;
     this.formError = '';
     this.api.saveList(payload).subscribe({
       next: (res) => {
         this.saving = false;
-        this.toast.success(editing ? 'Lista atualizada.' : 'Lista criada.');
+        this.toast.success('Lista criada.');
         this.load();
-        if (editing) {
-          this.closeWizard();
-        } else {
-          this.createdList = res.list;
-          this.wizardStep = 2;
-        }
+        this.createdList = res.list;
+        this.wizardStep = 2;
       },
       error: (err) => {
         this.saving = false;
@@ -161,44 +152,4 @@ export class ListsComponent implements OnInit, OnDestroy {
       },
     });
   }
-
-  exportandoId: string | null = null;
-
-  /** Mesmo endpoint da tela de Contatos, para as duas não divergirem. */
-  exportar(list: List): void {
-    this.exportandoId = list._id;
-    this.api.exportContacts({ listId: list._id }).subscribe({
-      next: (blob) => {
-        this.exportandoId = null;
-        baixarBlob(blob, `contatos-${list.name}.csv`);
-      },
-      error: (err) => {
-        this.exportandoId = null;
-        this.toast.apiError(err);
-      },
-    });
-  }
-
-  askDelete(list: List): void {
-    this.deleteTarget = list;
-  }
-
-  confirmDelete(): void {
-    const target = this.deleteTarget;
-    if (!target) return;
-    this.deleting = true;
-    this.api.deleteList(target._id).subscribe({
-      next: () => {
-        this.deleting = false;
-        this.deleteTarget = null;
-        this.toast.success(`Lista "${target.name}" excluída.`);
-        this.load();
-      },
-      error: (err) => {
-        this.deleting = false;
-        this.toast.apiError(err);
-      },
-    });
-  }
-
 }

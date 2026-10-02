@@ -12,6 +12,7 @@ import { ButtonComponent } from './shared/button/button.component';
 import { RowMenuComponent } from './shared/row-menu/row-menu.component';
 import { ConfirmComponent } from './shared/confirm/confirm.component';
 import { CsvImportComponent } from './shared/csv-import/csv-import.component';
+import { ImportDockComponent } from './shared/import-dock/import-dock.component';
 import { DataStateComponent } from './shared/data-state/data-state.component';
 import { EmptyStateComponent } from './shared/empty-state/empty-state.component';
 import { LogoComponent } from './shared/logo/logo.component';
@@ -33,6 +34,7 @@ import { CampaignsComponent } from './pages/campaigns/campaigns.component';
 import { ContactsComponent } from './pages/contacts/contacts.component';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
 import { ListsComponent } from './pages/lists/lists.component';
+import { ListDetailComponent } from './pages/list-detail/list-detail.component';
 import { InviteComponent } from './pages/invite/invite.component';
 import { LoginComponent } from './pages/login/login.component';
 import { OperacaoComponent } from './pages/operacao/operacao.component';
@@ -40,6 +42,7 @@ import { PlatformComponent } from './pages/platform/platform.component';
 import { SegmentsComponent } from './pages/segments/segments.component';
 import { SmtpComponent } from './pages/smtp/smtp.component';
 import { DomainsComponent } from './pages/domains/domains.component';
+import { FormWebhooksComponent } from './pages/form-webhooks/form-webhooks.component';
 import { TemplatesComponent } from './pages/templates/templates.component';
 import { TenantsComponent } from './pages/tenants/tenants.component';
 import { UsersComponent } from './pages/users/users.component';
@@ -53,6 +56,7 @@ const routes: Routes = [
 
   { path: 'dashboard', component: DashboardComponent, canActivate: [tenantGuard] },
   { path: 'lists', component: ListsComponent, canActivate: [tenantGuard] },
+  { path: 'lists/:id', component: ListDetailComponent, canActivate: [tenantGuard] },
   { path: 'contacts', component: ContactsComponent, canActivate: [tenantGuard] },
   { path: 'templates', component: TemplatesComponent, canActivate: [tenantGuard] },
   { path: 'campaigns', component: CampaignsComponent, canActivate: [tenantGuard] },
@@ -60,6 +64,7 @@ const routes: Routes = [
 
   { path: 'smtp', component: SmtpComponent, canActivate: [adminGuard] },
   { path: 'dominios', component: DomainsComponent, canActivate: [adminGuard] },
+  { path: 'formularios', component: FormWebhooksComponent, canActivate: [adminGuard] },
   { path: 'equipe', component: UsersComponent, canActivate: [adminGuard] },
 
   { path: 'clientes', component: TenantsComponent, canActivate: [superadminGuard] },
@@ -92,16 +97,19 @@ registerLocaleData(localePt);
     ConfirmComponent,
     PromptComponent,
     CsvImportComponent,
+    ImportDockComponent,
     LoginComponent,
     InviteComponent,
     DashboardComponent,
     ListsComponent,
+    ListDetailComponent,
     ContactsComponent,
     TemplatesComponent,
     CampaignsComponent,
     SegmentsComponent,
     SmtpComponent,
     DomainsComponent,
+    FormWebhooksComponent,
     UsersComponent,
     TenantsComponent,
     PlatformComponent,

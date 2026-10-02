@@ -1,0 +1,77 @@
+/* Canto inferior esquerdo: o direito é dos avisos (toasts). */
+.dock {
+  position: fixed; left: 20px; bottom: 20px; z-index: 900;
+  width: 300px; max-width: calc(100vw - 32px);
+  padding: 14px 16px 12px;
+  background: var(--c); border: 1px solid var(--br); border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(22, 38, 79, 0.16);
+  animation: sobe 0.22s ease-out both;
+}
+.dock.ready { border-color: var(--o); }
+.dock.ok { border-color: var(--gnd); }
+.dock.err { border-color: var(--r); }
+
+.d-head { display: flex; align-items: center; gap: 8px; }
+.d-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--o); }
+.dock.ok .d-dot { background: var(--gnd); }
+.dock.err .d-dot { background: var(--r); }
+.d-dot.pulse { animation: pulsa 1.2s ease-in-out infinite; }
+
+.d-title { flex: 1; min-width: 0; font-size: 13px; color: var(--n); }
+.d-close {
+  width: 24px; height: 24px; flex: none; border: 0; border-radius: 6px; padding: 0;
+  background: none; color: var(--g50); font-size: 18px; line-height: 1; cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.d-close:hover { background: var(--nl); color: var(--n); }
+.d-close:focus-visible { outline: 2px solid var(--o); outline-offset: 1px; }
+
+.d-file {
+  margin: 4px 0 10px 16px; font-size: 12px; color: var(--g50);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.d-track { height: 6px; background: var(--nl); border-radius: 4px; overflow: hidden; }
+.d-bar {
+  height: 100%; background: linear-gradient(90deg, var(--o), var(--om));
+  transition: width 0.4s ease;
+}
+.dock.ok .d-bar { background: var(--gnd); }
+.d-bar.indeterminate { width: 40%; animation: corre 1.15s ease-in-out infinite; }
+
+.d-count { margin: 8px 0 0; font-size: 12.5px; color: var(--t2); font-variant-numeric: tabular-nums; }
+.d-warn { margin: 6px 0 0; font-size: 12px; color: var(--wd); }
+.d-error { margin: 6px 0 0; font-size: 12px; color: var(--r); }
+
+.d-action {
+  margin-top: 10px; width: 100%; padding: 8px 12px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--o); background: var(--c); color: var(--od);
+  font-family: inherit; font-size: 12.5px; font-weight: 700;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.d-action:hover { background: var(--ol); }
+.dock.ready .d-action { background: var(--o); color: #fff; }
+.dock.ready .d-action:hover { background: var(--od); }
+.d-action:focus-visible { outline: 2px solid var(--o); outline-offset: 2px; }
+
+@media (max-width: 480px) {
+  .dock { left: 16px; right: 16px; bottom: 16px; width: auto; }
+}
+
+@keyframes sobe {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes corre {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+@keyframes pulsa {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock, .d-dot.pulse { animation: none; }
+  .d-bar.indeterminate { width: 100%; animation: none; }
+}

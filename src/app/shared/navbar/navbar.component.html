@@ -35,10 +35,11 @@
         tone="nav"
         triggerText="ajustes"
         label="Ajustes do cliente"
-        [active]="emGrupo(['/smtp', '/dominios', '/equipe'])"
+        [active]="emGrupo(['/smtp', '/dominios', '/formularios', '/equipe'])"
       >
         <a class="menu-item" routerLink="/smtp" routerLinkActive="active">SMTP</a>
         <a class="menu-item" routerLink="/dominios" routerLinkActive="active">Domínios</a>
+        <a class="menu-item" routerLink="/formularios" routerLinkActive="active">Formulários</a>
         <a class="menu-item" routerLink="/equipe" routerLinkActive="active">Equipe</a>
       </app-row-menu>
     </ng-container>
@@ -93,6 +94,7 @@
         <p class="np-secao">Ajustes</p>
         <a routerLink="/smtp" routerLinkActive="active">SMTP</a>
         <a routerLink="/dominios" routerLinkActive="active">Domínios</a>
+        <a routerLink="/formularios" routerLinkActive="active">Formulários</a>
         <a routerLink="/equipe" routerLinkActive="active">Equipe</a>
       </ng-container>
     </ng-container>

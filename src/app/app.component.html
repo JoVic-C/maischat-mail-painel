@@ -7,6 +7,7 @@
     <router-outlet></router-outlet>
   </div>
 </main>
+<app-import-dock *ngIf="auth.isLoggedIn"></app-import-dock>
 <app-toast-container></app-toast-container>
 <app-confirm></app-confirm>
 <app-prompt></app-prompt>

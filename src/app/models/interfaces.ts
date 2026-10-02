@@ -501,3 +501,52 @@ export interface FailureRow {
   error: string;
   at: string;
 }
+
+export interface FormWebhookStats {
+  received: number;
+  sent: number;
+  failed: number;
+  rejected: number;
+}
+
+export interface FormWebhook {
+  id: string;
+  name: string;
+  templateId: string;
+  templateName: string;
+  smtpId: string | null;
+  emailField: string;
+  nameField: string;
+  hourlyLimit: number;
+  redirectUrl: string;
+  isActive: boolean;
+  url: string;
+  stats: FormWebhookStats;
+  lastReceivedAt: string | null;
+  createdAt: string;
+}
+
+export interface SaveFormWebhookInput {
+  id?: string;
+  name: string;
+  templateId: string;
+  smtpId: string | null;
+  emailField: string;
+  nameField: string;
+  hourlyLimit: number;
+  redirectUrl: string;
+  isActive: boolean;
+}
+
+export type FormSubmissionStatus = 'queued' | 'sent' | 'failed' | 'rejected';
+
+export interface FormSubmission {
+  _id: string;
+  email: string;
+  name: string;
+  status: FormSubmissionStatus;
+  reason: string;
+  fields: Record<string, string>;
+  createdAt: string;
+  sentAt: string | null;
+}

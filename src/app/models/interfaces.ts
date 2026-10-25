@@ -148,6 +148,49 @@ export interface SaveListInput {
 export type ContactStatus = 'active' | 'unsubscribed' | 'bounced';
 export type DeliveryFilter = '' | 'delivered' | 'never' | 'undeliverable';
 
+/** Verificação da caixa postal (EmailListVerify). */
+export type VerificationStatus = 'deliverable' | 'undeliverable' | 'risky' | 'unknown';
+export type VerificationFilter = '' | VerificationStatus | 'unverified';
+
+export interface ContactVerification {
+  status: VerificationStatus;
+  /** Resultado bruto do provedor (ok, email_disabled, ok_for_all...). */
+  result: string;
+  checkedAt: string;
+}
+
+export type VerificationJobStatus = 'queued' | 'uploading' | 'verifying' | 'applying' | 'done' | 'failed';
+
+export interface VerificationCounters {
+  deliverable: number;
+  undeliverable: number;
+  risky: number;
+  unknown: number;
+}
+
+export interface VerificationJob {
+  _id: string;
+  listId: string;
+  status: VerificationJobStatus;
+  total: number;
+  progress: number;
+  counters: VerificationCounters;
+  error: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  createdAt: string;
+}
+
+export interface ListVerification {
+  /** Falso quando a instalação não tem a chave da EmailListVerify. */
+  enabled: boolean;
+  quota: { limit: number; used: number };
+  /** Contatos ativos sem verificação recente: o custo de verificar agora. */
+  pending: number;
+  ttlDays: number;
+  job: VerificationJob | null;
+}
+
 export interface Contact {
   _id: string;
   email: string;
@@ -159,6 +202,7 @@ export interface Contact {
   unsubscribedAt: string | null;
   lastDeliveredAt: string | null;
   metadata: Record<string, string>;
+  verification?: ContactVerification | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -186,6 +230,7 @@ export interface ContactQuery {
   listId?: string;
   status?: ContactStatus | '';
   delivery?: DeliveryFilter;
+  verification?: VerificationFilter;
   page?: number;
   limit?: number;
 }

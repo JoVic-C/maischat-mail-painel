@@ -17,6 +17,7 @@ import {
   InviteLink,
   InvitePreview,
   List,
+  ListVerification,
   LoginResult,
   ManagedUser,
   PlatformOverview,
@@ -44,6 +45,7 @@ import {
   UpdateTenantInput,
   UploadedImage,
   OpenImport,
+  VerificationJob,
 } from '../models';
 import { AuthService } from './auth.service';
 
@@ -77,6 +79,12 @@ export class ApiService {
   getList(id: string): Observable<List> {
     return this.http.get<List>(`${this.api}/lists/${id}`);
   }
+  getListVerification(id: string): Observable<ListVerification> {
+    return this.http.get<ListVerification>(`${this.api}/lists/${id}/verification`);
+  }
+  startListVerification(id: string): Observable<ApiMessage & { job: VerificationJob }> {
+    return this.http.post<ApiMessage & { job: VerificationJob }>(`${this.api}/lists/${id}/verify`, {});
+  }
   getLists(): Observable<List[]> {
     return this.http.get<List[]>(`${this.api}/lists`);
   }
@@ -97,6 +105,7 @@ export class ApiService {
         listId: query.listId,
         status: query.status,
         delivery: query.delivery,
+        verification: query.verification,
         page: query.page ?? 1,
         limit: query.limit ?? 50,
       }),

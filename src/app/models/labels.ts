@@ -1,4 +1,4 @@
-import { CampaignStatus, ContactStatus, ListType, SendStatus, UserRole } from './interfaces';
+import { CampaignStatus, ContactStatus, ListType, SendStatus, UserRole, VerificationStatus } from './interfaces';
 
 /** Classe visual do badge — mapeia para `.badge.<cls>` do design system. */
 export type BadgeClass = 'green' | 'red' | 'yellow' | 'purple' | 'gray';
@@ -79,4 +79,19 @@ export const CSV_ROW_LABELS: Record<string, BadgeInfo> = {
   'in-list': { label: '⏭️ já na lista', cls: 'gray' },
   already: { label: '⏭️ já cadastrado', cls: 'gray' },
   invalid: { label: '❌ inválido', cls: 'red' },
+};
+
+export const VERIFICATION_LABELS: Record<VerificationStatus, BadgeInfo> = {
+  deliverable: { label: 'Válido', cls: 'green', hint: 'A caixa postal existe e recebe emails.' },
+  undeliverable: {
+    label: 'Reprovado',
+    cls: 'red',
+    hint: 'A caixa postal não existe ou prejudicaria a reputação. Não recebe campanhas.',
+  },
+  risky: {
+    label: 'Arriscado',
+    cls: 'yellow',
+    hint: 'Domínio que aceita qualquer endereço ou email temporário. Recebe campanhas, mas pode voltar.',
+  },
+  unknown: { label: 'Inconclusivo', cls: 'gray', hint: 'O servidor do destino não permitiu confirmar.' },
 };

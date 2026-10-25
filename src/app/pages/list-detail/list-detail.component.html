@@ -34,6 +34,94 @@
       </div>
     </div>
 
+    <section
+      class="card verify"
+      *ngIf="verification?.enabled && verification as v"
+      aria-labelledby="verify-title"
+      [attr.aria-busy]="verificationRunning"
+    >
+      <div class="verify-head">
+        <div class="verify-text">
+          <h2 id="verify-title">Verificação de emails</h2>
+          <p class="hint" *ngIf="!verificationRunning">
+            <ng-container *ngIf="v.pending; else tudoVerificado">
+              <b>{{ v.pending | number }}</b> contato(s) ativo(s) sem verificação nos últimos {{ v.ttlDays }} dias.
+            </ng-container>
+            <ng-template #tudoVerificado>
+              Todos os contatos ativos foram verificados nos últimos {{ v.ttlDays }} dias.
+            </ng-template>
+            <span class="quota" *ngIf="v.quota.limit">
+              · Cota do mês: {{ v.quota.used | number }} de {{ v.quota.limit | number }}
+            </span>
+          </p>
+          <p class="hint" *ngIf="verificationRunning">Pode sair desta tela: a verificação continua no servidor.</p>
+        </div>
+
+        <app-button
+          *ngIf="auth.isAdmin && !verificationRunning && v.pending"
+          variant="primary"
+          [loading]="startingVerification"
+          [disabled]="quotaShort"
+          (click)="startVerification()"
+        >
+          Verificar {{ v.pending | number }} email(s)
+        </app-button>
+      </div>
+
+      <div class="verify-progress" *ngIf="verificationRunning" role="status" aria-live="polite">
+        <div class="progress-head">
+          <span class="progress-title">{{ verificationStep }}</span>
+          <span class="count" *ngIf="verificationProgress !== null">{{ verificationProgress }}%</span>
+        </div>
+        <div
+          class="progress-track"
+          role="progressbar"
+          [attr.aria-valuenow]="verificationProgress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          [attr.aria-label]="verificationStep"
+        >
+          <div
+            class="progress-bar"
+            [class.indeterminate]="verificationProgress === null"
+            [style.width.%]="verificationProgress ?? null"
+          ></div>
+        </div>
+      </div>
+
+      <p class="verify-warn" *ngIf="!verificationRunning && quotaShort">
+        A cota do mês não cobre esta lista: restam {{ quotaLeft | number }} verificações e a lista precisa de
+        {{ v.pending | number }}. Fale com o suporte para ampliar a cota.
+      </p>
+
+      <ng-container *ngIf="!verificationRunning && v.job as job">
+        <p class="verify-error" *ngIf="job.status === 'failed'" role="alert">
+          ⚠ {{ job.error || 'A última verificação falhou.' }}
+        </p>
+
+        <div class="verify-result" *ngIf="job.status === 'done' && job.total">
+          <span class="muted when">Última verificação em {{ job.finishedAt | date: 'dd/MM/yyyy HH:mm' }}:</span>
+          <button type="button" class="chip ok" (click)="onVerificationFilter('deliverable')">
+            <b>{{ job.counters.deliverable | number }}</b> válidos
+          </button>
+          <button type="button" class="chip bad" (click)="onVerificationFilter('undeliverable')">
+            <b>{{ job.counters.undeliverable | number }}</b> reprovados
+          </button>
+          <button type="button" class="chip warn" (click)="onVerificationFilter('risky')">
+            <b>{{ job.counters.risky | number }}</b> arriscados
+          </button>
+          <button type="button" class="chip soft" (click)="onVerificationFilter('unknown')">
+            <b>{{ job.counters.unknown | number }}</b> inconclusivos
+          </button>
+        </div>
+      </ng-container>
+    </section>
+
+    <p class="verify-load-error" *ngIf="verificationError && !verification" role="alert">
+      Não foi possível carregar a verificação de emails.
+      <button type="button" class="link" (click)="loadVerification()">Tentar de novo</button>
+    </p>
+
     <div class="card">
       <div class="toolbar">
         <input
@@ -44,6 +132,19 @@
           [value]="search"
           (input)="onSearch($any($event.target).value)"
         />
+        <select
+          class="filter"
+          aria-label="Filtrar por verificação"
+          [value]="verificationFilter"
+          (change)="onVerificationFilter($any($event.target).value)"
+        >
+          <option value="">Todas as verificações</option>
+          <option value="deliverable">Válidos</option>
+          <option value="undeliverable">Reprovados</option>
+          <option value="risky">Arriscados</option>
+          <option value="unknown">Inconclusivos</option>
+          <option value="unverified">Não verificados</option>
+        </select>
       </div>
 
       <app-data-state
@@ -51,7 +152,7 @@
         [error]="error"
         [empty]="!contacts.length"
         [emptyText]="emptyText"
-        [skeletonCols]="5"
+        [skeletonCols]="6"
         (retry)="loadContacts()"
       >
         <div class="tbl-wrap">
@@ -62,6 +163,7 @@
                 <th>Nome</th>
                 <th>Empresa</th>
                 <th>Situação</th>
+                <th>Verificação</th>
                 <th>Recebeu</th>
               </tr>
             </thead>
@@ -71,6 +173,14 @@
                 <td>{{ c.name || '—' }}</td>
                 <td class="muted">{{ c.company || '—' }}</td>
                 <td><app-status-badge kind="contact" [value]="c.status"></app-status-badge></td>
+                <td>
+                  <app-status-badge
+                    *ngIf="c.verification; else naoVerificado"
+                    kind="verification"
+                    [value]="c.verification.status"
+                  ></app-status-badge>
+                  <ng-template #naoVerificado><span class="muted" title="Ainda não verificado">—</span></ng-template>
+                </td>
                 <td class="muted">{{ c.lastDeliveredAt ? '✓ ' + (c.lastDeliveredAt | date: 'dd/MM/yyyy') : '—' }}</td>
               </tr>
             </tbody>

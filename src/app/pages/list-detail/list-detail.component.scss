@@ -12,13 +12,60 @@
 .meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: -6px; }
 .head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-.toolbar { margin-bottom: 12px; }
-.search { max-width: 360px; }
+.toolbar { margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+.search { max-width: 360px; flex: 1 1 220px; }
+.filter { width: auto; flex: 0 0 auto; }
+
+.verify { margin-bottom: 16px; animation: entra 0.2s ease-out both; }
+.verify-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.verify-text { min-width: 0; }
+.verify h2 { font-size: 14px; font-weight: 800; color: var(--n); margin: 0 0 4px; }
+.quota { white-space: nowrap; }
+
+.verify-progress { margin-top: 14px; }
+.progress-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 6px; }
+.progress-head .count { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--n); }
+.progress-title { font-weight: 700; font-size: 13px; color: var(--n); }
+.progress-track { height: 8px; background: var(--nl); border-radius: 6px; overflow: hidden; }
+.progress-bar {
+  height: 100%; background: linear-gradient(90deg, var(--o), var(--om));
+  transition: width 0.4s ease;
+}
+.progress-bar.indeterminate { width: 40%; animation: verify-slide 1.15s ease-in-out infinite; }
+@keyframes verify-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+
+.verify-error { margin: 12px 0 0; font-size: 12.5px; color: var(--r); font-weight: 600; }
+.verify-warn { margin: 12px 0 0; font-size: 12.5px; color: var(--wd); font-weight: 600; }
+
+.verify-result { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.verify-result .when { font-size: 12px; margin-right: 2px; }
+.chip {
+  border: 1px solid var(--br); background: var(--c); border-radius: 999px;
+  padding: 4px 12px; font: inherit; font-size: 12px; color: var(--g50); cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
+}
+.chip b { font-variant-numeric: tabular-nums; margin-right: 2px; }
+.chip:hover { border-color: var(--n); background: var(--nl); }
+.chip:active { transform: scale(0.97); }
+.chip:focus-visible { outline: 2px solid var(--o); outline-offset: 2px; }
+.chip.ok b { color: var(--gn); }
+.chip.bad b { color: var(--r); }
+.chip.warn b { color: var(--wd); }
+.chip.soft b { color: var(--g50); }
+
+.verify-load-error { font-size: 12.5px; color: var(--g50); margin: 0 0 12px; }
+.link {
+  background: none; border: 0; padding: 0; color: var(--o); font-weight: 700; cursor: pointer;
+  text-decoration: underline; font-size: inherit;
+}
 
 .email { font-weight: 500; white-space: nowrap; }
 
 @media (max-width: 640px) {
-  .head { flex-direction: column; }
+  .head, .verify-head { flex-direction: column; }
 }
 
 @keyframes entra {
@@ -27,5 +74,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .head { animation: none; }
+  .head, .verify { animation: none; }
+  .progress-bar.indeterminate { width: 100%; animation: none; }
 }

@@ -9,9 +9,19 @@ import {
   MATCH_LABELS,
   SEND_STATUS_LABELS,
   USER_ROLE_LABELS,
+  VERIFICATION_LABELS,
 } from '../../models';
 
-export type BadgeKind = 'campaign' | 'contact' | 'send' | 'listType' | 'role' | 'active' | 'match' | 'csvRow';
+export type BadgeKind =
+  | 'campaign'
+  | 'contact'
+  | 'send'
+  | 'listType'
+  | 'role'
+  | 'active'
+  | 'match'
+  | 'csvRow'
+  | 'verification';
 
 @Component({
     selector: 'app-status-badge',
@@ -33,6 +43,7 @@ export class StatusBadgeComponent {
     active: ACTIVE_LABELS,
     match: MATCH_LABELS,
     csvRow: CSV_ROW_LABELS,
+    verification: VERIFICATION_LABELS,
   };
 
   get info(): BadgeInfo | null {

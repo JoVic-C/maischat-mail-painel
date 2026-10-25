@@ -1,6 +1,8 @@
 import type { Page, Route } from '@playwright/test';
 import type {
   AuthUser,
+  ContactVerification,
+  ListVerification,
   Campaign,
   CampaignStatus,
   DashboardStats,
@@ -166,7 +168,9 @@ export interface MockSeed {
   smtps?: SmtpServer[];
   logs?: SendLog[];
   tenants?: TenantSummary[];
-  contacts?: { _id: string; email: string; name?: string }[];
+  contacts?: MockContact[];
+  /** Respostas da verificação da lista, uma por consulta; a última se repete. */
+  listVerifications?: ListVerification[];
   importStates?: Record<string, unknown>[];
   sendingDomains?: SendingDomainsOverview;
   /** Resposta da verificação por domínio; sem entrada, devolve o domínio como está. */
@@ -199,6 +203,17 @@ export function makeFormWebhook(over: Partial<FormWebhook> & { name: string }): 
   };
 }
 
+export type MockContact = { _id: string; email: string; name?: string; verification?: ContactVerification };
+
+/** Instalação sem a chave da EmailListVerify: o painel de verificação não aparece. */
+export const VERIFICATION_OFF: ListVerification = {
+  enabled: false,
+  quota: { limit: 0, used: 0 },
+  pending: 0,
+  ttlDays: 90,
+  job: null,
+};
+
 /** Dublê da API com estado em memória, registro de chamadas e falhas forçadas por rota. */
 export class ApiMock {
   user: AuthUser;
@@ -219,7 +234,8 @@ export class ApiMock {
 
   /** Fila de estados do job, consumida a cada consulta: testa a transição sem cronômetro. */
   importStates: Record<string, unknown>[] = [];
-  contacts: { _id: string; email: string; name?: string }[] = [];
+  contacts: MockContact[] = [];
+  listVerifications: ListVerification[] = [];
 
   /** Falhas forçadas, por apelido de rota (ex.: 'login', 'campaigns', 'saveCampaign'). */
   readonly failures = new Map<string, ApiFailure>();
@@ -244,6 +260,7 @@ export class ApiMock {
     this.formWebhooks = seed.formWebhooks ?? [];
     this.formSubmissions = seed.formSubmissions ?? {};
     this.openImports = seed.openImports ?? [];
+    this.listVerifications = seed.listVerifications ?? [VERIFICATION_OFF];
   }
 
   fail(routeAlias: string, status: number, body: unknown): void {
@@ -360,6 +377,28 @@ export class ApiMock {
         : makeList({ name: String(body['name']), _id: `l-nova-${this.lists.length + 1}` });
       this.lists = current ? this.lists.map((l) => (l._id === list._id ? list : l)) : [list, ...this.lists];
       return this.json(route, { message: 'Lista salva.', list });
+    }
+    if (method === 'GET' && /^\/lists\/[^/]+\/verification$/.test(path)) {
+      if (await this.rejectIfFailing(route, 'listVerification')) return;
+      const atual = this.listVerifications.length > 1 ? this.listVerifications.shift() : this.listVerifications[0];
+      return this.json(route, atual ?? VERIFICATION_OFF);
+    }
+    const verifyListMatch = path.match(/^\/lists\/([^/]+)\/verify$/);
+    if (method === 'POST' && verifyListMatch) {
+      if (await this.rejectIfFailing(route, 'verifyList')) return;
+      const job = {
+        _id: 'vj-1',
+        listId: verifyListMatch[1],
+        status: 'queued',
+        total: 0,
+        progress: 0,
+        counters: { deliverable: 0, undeliverable: 0, risky: 0, unknown: 0 },
+        error: '',
+        startedAt: null,
+        finishedAt: null,
+        createdAt: ISO,
+      };
+      return this.json(route, { message: 'Verificação iniciada.', job }, 202);
     }
     const listMatch = path.match(/^\/lists\/([^/]+)$/);
     if (listMatch && method === 'GET') {

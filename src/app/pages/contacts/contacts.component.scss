@@ -18,5 +18,49 @@
 .check-col { width: 34px; }
 .check-col input { width: auto; }
 .email { font-weight: 600; }
+
+/* Erro de digitação no domínio */
+.typo-banner {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--wl); border: 1px solid #f1cc74; border-radius: 12px;
+  padding: 12px 16px; margin-bottom: 14px;
+  animation: typo-in 0.22s ease;
+}
+.typo-banner p { flex: 1; margin: 0; font-size: 13px; line-height: 1.5; color: var(--t); }
+.typo-icon { font-size: 18px; color: var(--wd); line-height: 1; }
+
+.typo-tag {
+  display: block; margin-top: 2px;
+  font-size: 11.5px; font-weight: 600; color: var(--wd);
+}
+
+.typo-hint {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px;
+  margin-top: 6px; padding: 8px 10px;
+  background: var(--wl); border: 1px solid #f1cc74; border-radius: 8px;
+  font-size: 12.5px; color: var(--t);
+  animation: typo-in 0.18s ease;
+}
+.typo-actions { display: inline-flex; gap: 12px; }
+.typo-hint .link {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font: inherit; font-weight: 700; color: var(--o);
+  text-decoration: underline; text-underline-offset: 2px;
+}
+.typo-hint .link.soft { color: var(--t2); font-weight: 600; }
+.typo-hint .link:focus-visible { outline: 2px solid var(--o); outline-offset: 2px; border-radius: 2px; }
+
+@keyframes typo-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 640px) {
+  .typo-banner { flex-direction: column; align-items: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typo-banner, .typo-hint { animation: none; }
+}
 tr.row-selected td { background: var(--oxl); }
 

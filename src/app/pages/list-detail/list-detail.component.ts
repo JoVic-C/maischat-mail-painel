@@ -3,7 +3,16 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { Contact, List, ListVerification, SaveListInput, VerificationFilter, VerificationJobStatus } from '../../models';
+import {
+  Contact,
+  List,
+  ListVerification,
+  SaveListInput,
+  VerificationFilter,
+  VerificationJobStatus,
+  verificationResultReason,
+  verificationResultTag,
+} from '../../models';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { ConfirmService } from '../../shared/confirm/confirm.service';
@@ -40,6 +49,8 @@ export class ListDetailComponent implements OnInit, OnDestroy {
   total = 0;
   page = 1;
   readonly limit = PAGE_SIZE;
+  readonly resultReason = verificationResultReason;
+  readonly resultTag = verificationResultTag;
   loading = false;
   error: string | null = null;
   search = '';

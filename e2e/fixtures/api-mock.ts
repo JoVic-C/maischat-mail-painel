@@ -19,6 +19,7 @@ import type {
   SmtpServer,
   Template,
   TenantSummary,
+  TypoDomain,
 } from '../../src/app/models';
 
 /** Mesma origem configurada em src/environments/environment.ts. */
@@ -181,6 +182,12 @@ export interface MockSeed {
   formSubmissions?: Record<string, FormSubmission[]>;
   /** Importações abertas no servidor, retomadas pelo painel ao carregar. */
   openImports?: Record<string, unknown>[];
+  /** Domínios com possível erro de digitação, para a revisão do admin. */
+  typoDomains?: TypoDomain[];
+  /** Sugestão por email digitado (em minúsculas); sem entrada, não há suspeita. */
+  emailSuggestions?: Record<string, string>;
+  /** Conflitos devolvidos ao corrigir cada domínio; sem entrada, nenhum. */
+  typoConflicts?: Record<string, number>;
 }
 
 export function makeFormWebhook(over: Partial<FormWebhook> & { name: string }): FormWebhook {
@@ -231,6 +238,9 @@ export class ApiMock {
   formWebhooks: FormWebhook[];
   formSubmissions: Record<string, FormSubmission[]>;
   openImports: Record<string, unknown>[];
+  typoDomains: TypoDomain[];
+  emailSuggestions: Record<string, string>;
+  typoConflicts: Record<string, number>;
 
   /** Fila de estados do job, consumida a cada consulta: testa a transição sem cronômetro. */
   importStates: Record<string, unknown>[] = [];
@@ -261,6 +271,9 @@ export class ApiMock {
     this.formSubmissions = seed.formSubmissions ?? {};
     this.openImports = seed.openImports ?? [];
     this.listVerifications = seed.listVerifications ?? [VERIFICATION_OFF];
+    this.typoDomains = seed.typoDomains ?? [];
+    this.emailSuggestions = seed.emailSuggestions ?? {};
+    this.typoConflicts = seed.typoConflicts ?? {};
   }
 
   fail(routeAlias: string, status: number, body: unknown): void {
@@ -323,6 +336,41 @@ export class ApiMock {
     if (method === 'GET' && path === '/contacts') {
       if (await this.rejectIfFailing(route, 'contacts')) return;
       return this.json(route, { contacts: this.contacts, total: this.contacts.length, page: 1, limit: 50 });
+    }
+    if (method === 'POST' && path === '/contacts/save') {
+      if (await this.rejectIfFailing(route, 'saveContact')) return;
+      const email = String(body['email'] ?? '').toLowerCase();
+      const current = this.contacts.find((c) => c._id === body['id']);
+      const contact: MockContact = { ...(current ?? {}), _id: current?._id ?? `ct-${email}`, email };
+      this.contacts = current ? this.contacts.map((c) => (c._id === contact._id ? contact : c)) : [contact, ...this.contacts];
+      return this.json(route, { message: 'Contato salvo.', contact });
+    }
+    if (method === 'GET' && path === '/contacts/email-suggestion') {
+      if (await this.rejectIfFailing(route, 'emailSuggestion')) return;
+      return this.json(route, { suggestion: this.emailSuggestions[(query['email'] ?? '').toLowerCase()] ?? null });
+    }
+    if (method === 'GET' && path === '/contacts/typo-domains') {
+      if (await this.rejectIfFailing(route, 'typoDomains')) return;
+      return this.json(route, { domains: this.typoDomains });
+    }
+    if (method === 'POST' && path === '/contacts/typo-domains/fix') {
+      if (await this.rejectIfFailing(route, 'fixTypoDomain')) return;
+      const from = String(body['from']);
+      const row = this.typoDomains.find((d) => d.domain === from);
+      if (!row) return this.error(route, 400, `O domínio ${from} não está entre os suspeitos de erro de digitação.`);
+      const conflicts = this.typoConflicts[from] ?? 0;
+      const fixed = row.count - conflicts;
+      this.typoDomains = conflicts
+        ? this.typoDomains.map((d) => (d.domain === from ? { ...d, count: conflicts } : d))
+        : this.typoDomains.filter((d) => d.domain !== from);
+      return this.json(route, { message: `${fixed} contato(s) corrigido(s).`, fixed, conflicts });
+    }
+    if (method === 'POST' && path === '/contacts/typo-domains/accept') {
+      if (await this.rejectIfFailing(route, 'acceptTypoDomain')) return;
+      const domain = String(body['domain']);
+      const row = this.typoDomains.find((d) => d.domain === domain);
+      this.typoDomains = this.typoDomains.filter((d) => d.domain !== domain);
+      return this.json(route, { message: 'Domínio mantido.', released: row?.count ?? 0 });
     }
     if (method === 'GET' && path === '/contacts/import/open') {
       return this.json(route, this.openImports);

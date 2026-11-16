@@ -1,5 +1,5 @@
 # ─── Estágio 1: build (compila o Angular em modo produção) ───
-FROM node:22-alpine AS build
+FROM node:22.23.4-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./

@@ -1,9 +1,10 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subject, Subscription, catchError, debounceTime, of, switchMap } from 'rxjs';
 import { Contact, ContactQuery, ContactStatus, DeliveryFilter, List, SaveContactInput } from '../../models';
 import { ApiService } from '../../services/api.service';
+import { AuthService } from '../../services/auth.service';
 import { ImportTrackerService } from '../../services/import-tracker.service';
 import { ConfirmService } from '../../shared/confirm/confirm.service';
 import { baixarBlob } from '../../shared/download';
@@ -12,6 +13,8 @@ import { apiErrorMessage, ServerErrorsHandler } from '../../shared/server-errors
 import { ToastService } from '../../shared/toast/toast.service';
 
 const PAGE_SIZE = 50;
+/** Só consulta a sugestão quando já parece um email completo. */
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 @Component({
     selector: 'app-contacts',
@@ -41,7 +44,17 @@ export class ContactsComponent implements OnInit, OnDestroy {
   modal = false;
   saving = false;
   importModal = false;
+  typoModal = false;
   editingId: string | null = null;
+
+  /** Resumo dos domínios com possível erro de digitação (só para admin). */
+  typoSummary: { domains: number; contacts: number } | null = null;
+
+  /** Email do formulário com o domínio corrigido, quando o atual parece ter erro de digitação. */
+  emailSuggestion: string | null = null;
+  /** A pessoa viu a sugestão e preferiu manter o email como digitou. */
+  keepEmail = false;
+  private readonly emailCheck$ = new Subject<string>();
 
   form: FormGroup;
   formError = '';
@@ -75,7 +88,8 @@ export class ContactsComponent implements OnInit, OnDestroy {
     private tracker: ImportTrackerService,
     private route: ActivatedRoute,
     private router: Router,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    public auth: AuthService
   ) {
     this.form = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -85,6 +99,42 @@ export class ContactsComponent implements OnInit, OnDestroy {
       lists: [[] as string[]],
     });
     this.serverErrors = new ServerErrorsHandler(this.form);
+    this.watchEmailTypos();
+  }
+
+  /**
+   * Pergunta ao servidor se o domínio digitado parece errado. O `switchMap` descarta a
+   * resposta de um email que já mudou; falha na consulta só deixa de mostrar o aviso.
+   */
+  private watchEmailTypos(): void {
+    this.subs.add(
+      this.emailCheck$
+        .pipe(
+          debounceTime(400),
+          switchMap((email) =>
+            EMAIL_SHAPE.test(email) ? this.api.getEmailSuggestion(email).pipe(catchError(() => of(null))) : of(null)
+          )
+        )
+        .subscribe((suggestion) => (this.emailSuggestion = suggestion))
+    );
+    this.subs.add(
+      this.form.get('email')!.valueChanges.subscribe((value: string | null) => {
+        this.emailSuggestion = null;
+        this.keepEmail = false;
+        this.emailCheck$.next((value ?? '').trim().toLowerCase());
+      })
+    );
+  }
+
+  useSuggestion(): void {
+    if (!this.emailSuggestion) return;
+    this.form.patchValue({ email: this.emailSuggestion });
+    document.getElementById('ct-email')?.focus();
+  }
+
+  keepTypedEmail(): void {
+    this.emailSuggestion = null;
+    this.keepEmail = true;
   }
 
   ngOnInit(): void {
@@ -99,8 +149,15 @@ export class ContactsComponent implements OnInit, OnDestroy {
       error: (err) => this.toast.apiError(err),
     });
 
+    this.loadTypoSummary();
+
     // Importação minimizada que terminou: a base mudou por trás da tela.
-    this.subs.add(this.tracker.finished$.subscribe(() => this.reload()));
+    this.subs.add(
+      this.tracker.finished$.subscribe(() => {
+        this.reload();
+        this.loadTypoSummary();
+      })
+    );
 
     // O cartão do canto pede para reabrir a importação (revisar e confirmar).
     this.subs.add(
@@ -290,6 +347,8 @@ export class ContactsComponent implements OnInit, OnDestroy {
     }
     const payload: SaveContactInput = { ...this.form.value };
     if (this.editingId) payload.id = this.editingId;
+    if (this.keepEmail) payload.keepEmail = true;
+    const typoPending = !!this.emailSuggestion;
 
     this.saving = true;
     this.formError = '';
@@ -297,7 +356,12 @@ export class ContactsComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.saving = false;
         this.modal = false;
-        this.toast.success(res.message);
+        if (typoPending) {
+          this.toast.warn('Contato salvo, mas o domínio parece ter erro de digitação: ele fica fora das campanhas até a revisão.');
+          this.loadTypoSummary();
+        } else {
+          this.toast.success(res.message);
+        }
         this.load();
       },
       error: (err) => {
@@ -340,6 +404,33 @@ export class ContactsComponent implements OnInit, OnDestroy {
           error: (err) => this.toast.apiError(err),
         });
       });
+  }
+
+  /** Só o admin revisa domínios; para os outros papéis a consulta nem é feita. */
+  loadTypoSummary(): void {
+    if (!this.auth.isAdmin) return;
+    this.api.getTypoDomains().subscribe({
+      next: (domains) => {
+        this.typoSummary = domains.length
+          ? { domains: domains.length, contacts: domains.reduce((sum, d) => sum + d.count, 0) }
+          : null;
+      },
+      // O aviso é acessório: sem ele a tela de contatos continua funcionando.
+      error: () => (this.typoSummary = null),
+    });
+  }
+
+  openTypoReview(): void {
+    this.typoModal = true;
+  }
+
+  closeTypoReview(): void {
+    this.typoModal = false;
+    this.loadTypoSummary();
+  }
+
+  isTypoSuspect(contact: Contact): boolean {
+    return contact.verification?.result === 'typo_suspected';
   }
 
   fmtDate(d: string): string {

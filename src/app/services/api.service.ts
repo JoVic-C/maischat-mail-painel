@@ -45,6 +45,8 @@ import {
   UpdateTenantInput,
   UploadedImage,
   OpenImport,
+  FixTypoDomainResult,
+  TypoDomain,
   VerificationJob,
 } from '../models';
 import { AuthService } from './auth.service';
@@ -134,6 +136,22 @@ export class ApiService {
   }
   bulkDeleteContacts(ids: string[]): Observable<ApiMessage & { deleted: number }> {
     return this.http.post<ApiMessage & { deleted: number }>(`${this.api}/contacts/bulk-delete`, { ids });
+  }
+
+  /** Email com o domínio corrigido, ou `null` quando não há suspeita de erro de digitação. */
+  getEmailSuggestion(email: string): Observable<string | null> {
+    return this.http
+      .get<{ suggestion: string | null }>(`${this.api}/contacts/email-suggestion`, { params: this.params({ email }) })
+      .pipe(map((res) => res.suggestion));
+  }
+  getTypoDomains(): Observable<TypoDomain[]> {
+    return this.http.get<{ domains: TypoDomain[] }>(`${this.api}/contacts/typo-domains`).pipe(map((res) => res.domains));
+  }
+  fixTypoDomain(from: string, to: string): Observable<FixTypoDomainResult> {
+    return this.http.post<FixTypoDomainResult>(`${this.api}/contacts/typo-domains/fix`, { from, to });
+  }
+  acceptTypoDomain(domain: string): Observable<ApiMessage & { released: number }> {
+    return this.http.post<ApiMessage & { released: number }>(`${this.api}/contacts/typo-domains/accept`, { domain });
   }
 
   /** Aceita Blob para o CSV colado na tela. */

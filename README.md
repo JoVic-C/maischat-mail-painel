@@ -27,11 +27,17 @@ src/
     │   ├── data-state/ skeleton/ paginator/ navbar/
     │   ├── toast/           # toast.service + toast-container (fila com kinds)
     │   ├── confirm/ prompt/ # substituem confirm()/prompt() nativos
-    │   ├── csv-import/      # importador com validação ao vivo (SSE)
+    │   ├── csv-import/      # importador: envia o arquivo e acompanha o job no servidor
+    │   ├── import-dock/     # importações em andamento, visíveis em qualquer tela
+    │   ├── html/            # sanitização do HTML de template (DOMPurify)
+    │   ├── typo-review/     # revisão de domínios com erro de digitação (corrigir / manter)
+    │   ├── multi-select/ row-menu/ logo/
     │   └── server-errors/   # ServerErrorsHandler + apiErrorMessage
     └── pages/               # uma pasta por tela (.ts + .html + .scss)
-        ├── login/ dashboard/ lists/ contacts/ templates/ campaigns/ segments/
-        └── smtp/ users/ tenants/ account/
+        ├── login/ invite/ account/
+        ├── dashboard/ lists/ list-detail/ contacts/ templates/ campaigns/ segments/
+        ├── smtp/ domains/ form-webhooks/ users/          # admin do cliente
+        └── tenants/ operacao/ platform/                 # superadmin
 ```
 
 ## Rodando
@@ -56,7 +62,7 @@ npm run test:e2e:report
 
 A API é **dublada no navegador** por `e2e/fixtures/api-mock.ts` — o quality gate proíbe
 teste que dependa de Mongo, Redis, SMTP ou DNS reais, e o contrato do backend já é
-coberto pelos testes de integração do Jest (`../backend`). Aqui o alvo é a interface:
+coberto pelos testes de integração do Vitest (repositório `backend`). Aqui o alvo é a interface:
 rotas, guards, validação, estados e o fluxo de disparo.
 
 O `ApiMock` guarda estado em memória (criar campanha realmente aparece na listagem
@@ -64,7 +70,10 @@ seguinte), grava as chamadas recebidas para asserção (`lastCallTo('/start')?.b
 permite forçar falha por rota (`api.fail('login', 401, {...})`). Rota não dublada
 responde **501** de propósito, para a suíte falhar alto em vez de mascarar a chamada.
 
-Cobertura atual — `e2e/login.spec.ts`, `e2e/campaigns.spec.ts` e `e2e/templates.spec.ts`:
+Specs atuais: `login`, `sessao`, `navbar`, `dashboard`, `lists`, `contacts-import`,
+`campaigns`, `templates`, `domains`, `form-webhooks`, `verificacao-email`, `erro-digitacao`
+e `platform`.
+Os três mais antigos, em detalhe:
 
 - **Login:** guard sem sessão, validação local, credencial inválida, erro por campo,
   destino por papel (`admin`/`user` → dashboard, `superadmin` → `/clientes`),
@@ -135,8 +144,27 @@ O backend escopa todo dado por cliente (tenant). O frontend acompanha:
 | Papel | Vê no painel | Rotas extras |
 |---|---|---|
 | `user` | dashboard, listas, contatos, templates, campanhas, segmentos | — |
-| `admin` | tudo do `user` + SMTP e equipe | `/smtp`, `/equipe` |
-| `superadmin` | tudo, dentro do cliente escolhido | `/clientes` |
+| `admin` | tudo do `user` + SMTP, domínios de envio, formulários e equipe | `/smtp`, `/dominios`, `/formularios`, `/equipe` |
+| `superadmin` | tudo, dentro do cliente escolhido | `/clientes`, `/operacao`, `/plataforma` |
+
+Todos os papéis têm `/conta`. `/definir-senha` e `/redefinir-senha` são públicas (links
+de convite e de recuperação).
+
+A tela da lista (`/lists/:id`) mostra a verificação de cada contato: o selo agrupa
+(válido, reprovado, arriscado, inconclusivo) e, embaixo, uma etiqueta dá o motivo quando
+ele muda a decisão (ex.: "Email temporário", "Aceita qualquer endereço"). Os textos ficam
+em `models/labels.ts`, espelhando os do backend.
+
+**Erro de digitação no domínio:**
+
+- No formulário de contato, o painel consulta a API ao digitar o email e, se o domínio
+  parece errado, mostra "Você quis dizer...?". Há dois botões:
+  - **Usar este** troca o email;
+  - **Manter como digitei** manda `keepEmail: true`.
+- Para o admin, a tela de Contatos mostra um aviso com o total de domínios suspeitos. Ele
+  abre a revisão (`shared/typo-review/`), onde cada domínio pode ser corrigido em lote
+  (com o destino editável) ou mantido.
+- Contatos marcados aparecem com a etiqueta "Erro de digitação? → @gmail.com".
 
 - O `TokenInterceptor` anexa o JWT em toda requisição e, **para o superadmin**, o
   header `X-Tenant-Id` com o cliente em operação (escolhido em `/clientes`).
@@ -195,8 +223,8 @@ O símbolo usa `currentColor`, então herda a cor do contexto — `markColor="br
 ## Deploy
 
 `Dockerfile` multi-stage: compila em produção e serve os estáticos por nginx.
-O `nginx.conf` faz o SPA fallback, cache imutável de assets e proxy de `/api` e
-`/uploads` para o serviço `backend` (com buffering desligado na rota de SSE).
+O `default.conf.template` do nginx faz o SPA fallback, cache imutável de assets e proxy
+de `/api` e `/uploads` para o serviço `backend`.
 
 ```bash
 cd ../backend && docker compose up -d --build   # sobe mongo, redis, backend e frontend
@@ -208,5 +236,7 @@ cd ../backend && docker compose up -d --build   # sobe mongo, redis, backend e f
 Não incluídos: Biome, Sentry e lazy loading por rota — o Portal de Parceiros já tem os
 dois primeiros e serve de referência para trazê-los.
 
-Playwright já está no lugar (veja **Testes E2E**), mas ainda sem testes das telas de
-contatos, listas, templates, segmentos, SMTP, equipe e clientes — e sem execução em CI.
+O Playwright roda no CI (`.github/workflows/ci.yml`, junto com a auditoria e o build de
+produção). Ainda sem spec próprio: segmentos, SMTP, equipe e clientes.
+
+Regras de trabalho deste repositório: [AGENTS.md](AGENTS.md).

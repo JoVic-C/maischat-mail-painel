@@ -64,6 +64,10 @@
 
 .email { font-weight: 500; white-space: nowrap; }
 
+/* O badge diz o grupo; a etiqueta embaixo diz o motivo (ex.: email temporário). */
+.verify-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.verify-tag { font-size: 11.5px; line-height: 1.3; color: var(--g50); white-space: nowrap; }
+
 @media (max-width: 640px) {
   .head, .verify-head { flex-direction: column; }
 }

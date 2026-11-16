@@ -95,3 +95,35 @@ export const VERIFICATION_LABELS: Record<VerificationStatus, BadgeInfo> = {
   },
   unknown: { label: 'Inconclusivo', cls: 'gray', hint: 'O servidor do destino não permitiu confirmar.' },
 };
+
+/**
+ * Motivo de cada resultado da EmailListVerify, espelho do `ELV_REASON` do backend. O status
+ * agrupa (ex.: "Arriscado"); o resultado diz por quê (email temporário ≠ aceita qualquer endereço).
+ * `tag` só existe onde o motivo muda a decisão de quem lê a lista.
+ */
+const VERIFICATION_RESULTS: Record<string, { reason: string; tag?: string }> = {
+  ok: { reason: 'Caixa postal válida' },
+  email_disabled: { reason: 'Caixa postal não existe ou está desativada', tag: 'Caixa inexistente' },
+  dead_server: { reason: 'Domínio não existe ou não recebe emails', tag: 'Domínio sem email' },
+  invalid_mx: { reason: 'Servidor de email do domínio mal configurado', tag: 'MX mal configurado' },
+  invalid_syntax: { reason: 'Endereço com formato inválido', tag: 'Formato inválido' },
+  spamtrap: { reason: 'Armadilha de spam: enviar prejudica a reputação', tag: 'Armadilha de spam' },
+  ok_for_all: { reason: 'Domínio aceita qualquer endereço; a caixa não pôde ser confirmada', tag: 'Aceita qualquer endereço' },
+  disposable: { reason: 'Email temporário (descartável): dificilmente vai abrir ou clicar', tag: 'Email temporário' },
+  antispam_system: { reason: 'O antispam do destino impediu a verificação', tag: 'Bloqueado pelo antispam' },
+  // Marcação do detector de erro de digitação, não do provedor.
+  typo_suspected: {
+    reason: 'Possível erro de digitação no domínio: fica fora das campanhas até a revisão',
+    tag: 'Erro de digitação?',
+  },
+};
+
+const UNKNOWN_RESULT_REASON = 'Não foi possível verificar';
+
+export function verificationResultReason(result: string | null | undefined): string {
+  return VERIFICATION_RESULTS[(result ?? '').trim().toLowerCase()]?.reason ?? UNKNOWN_RESULT_REASON;
+}
+
+export function verificationResultTag(result: string | null | undefined): string | null {
+  return VERIFICATION_RESULTS[(result ?? '').trim().toLowerCase()]?.tag ?? null;
+}

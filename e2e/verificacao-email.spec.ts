@@ -82,7 +82,8 @@ test.describe('Verificação de emails da lista', () => {
     await expect(dialogo).toContainText('Cada verificação consome 1 crédito');
     await dialogo.getByRole('button', { name: 'Verificar 3' }).click();
 
-    expect(api.lastCallTo('/verify')?.method).toBe('POST');
+    // A requisição sai depois do clique: conferir na hora seria uma corrida.
+    await expect.poll(() => api.lastCallTo('/verify')?.method).toBe('POST');
     await expect(painel(page)).toContainText('Na fila para verificar');
     await expect(painel(page).getByRole('progressbar')).toBeVisible();
 

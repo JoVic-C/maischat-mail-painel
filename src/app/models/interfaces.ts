@@ -157,6 +157,22 @@ export interface ContactVerification {
   /** Resultado bruto do provedor (ok, email_disabled, ok_for_all...). */
   result: string;
   checkedAt: string;
+  /** Só em `typo_suspected`: o domínio que a pessoa provavelmente quis digitar. */
+  suggestion?: string;
+}
+
+/** Domínio da base com possível erro de digitação, para a revisão do admin. */
+export interface TypoDomain {
+  domain: string;
+  count: number;
+  suggestion: string;
+}
+
+export interface FixTypoDomainResult {
+  message: string;
+  fixed: number;
+  /** Já existia contato com o email corrigido: esses ficaram como estavam. */
+  conflicts: number;
 }
 
 export type VerificationJobStatus = 'queued' | 'uploading' | 'verifying' | 'applying' | 'done' | 'failed';
@@ -223,6 +239,8 @@ export interface SaveContactInput {
   lists?: string[];
   status?: ContactStatus;
   metadata?: Record<string, string>;
+  /** Viu o aviso de possível erro de digitação e decidiu manter o email como está. */
+  keepEmail?: boolean;
 }
 
 export interface ContactQuery {
@@ -246,6 +264,8 @@ export interface ImportCounters {
   inList: number;
   already: number;
   invalid: number;
+  /** Novos com possível erro de digitação no domínio (já contados em `new`). Ausente em jobs antigos. */
+  typo?: number;
 }
 
 export interface ImportSampleRow {

@@ -1,0 +1,75 @@
+<p class="hint intro">
+  Domínios parecidos com o de um provedor (gmail, hotmail, icloud...) ou com um domínio frequente da sua base.
+  Os contatos deles ficam <b>fora das campanhas</b> até você corrigir ou manter.
+</p>
+
+<app-data-state
+  [loading]="loading"
+  [error]="error"
+  [empty]="!rows.length"
+  emptyText="Nenhum domínio com possível erro de digitação na sua base."
+  [skeletonRows]="4"
+  [skeletonCols]="4"
+  (retry)="load()"
+>
+  <p class="summary" aria-live="polite">
+    <b>{{ rows.length | number }}</b> {{ rows.length === 1 ? 'domínio' : 'domínios' }} ·
+    <b>{{ totalContacts | number }}</b> {{ totalContacts === 1 ? 'contato' : 'contatos' }}
+  </p>
+
+  <div class="tbl-wrap">
+    <table class="tbl review">
+      <thead>
+        <tr>
+          <th scope="col">Digitado</th>
+          <th scope="col" class="ta-right">Contatos</th>
+          <th scope="col">Corrigir para</th>
+          <th scope="col" class="ta-right">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows; trackBy: trackByDomain" [class.leaving]="row.leaving" [attr.aria-busy]="!!row.busy">
+          <td class="wrong">&#64;{{ row.domain }}</td>
+          <td class="ta-right count">
+            {{ row.count | number }}<span class="count-unit"> {{ row.count === 1 ? 'contato' : 'contatos' }}</span>
+          </td>
+          <td class="target-cell">
+            <div class="target" [class.is-invalid]="!!targetError(row)">
+              <span class="at" aria-hidden="true">&#64;</span>
+              <input
+                [(ngModel)]="row.target"
+                [disabled]="!!row.busy"
+                [attr.aria-label]="'Domínio certo para @' + row.domain"
+                [attr.aria-invalid]="!!targetError(row)"
+                autocapitalize="off"
+                autocomplete="off"
+                spellcheck="false"
+              />
+            </div>
+            <span class="field-error" *ngIf="targetError(row) as msg">{{ msg }}</span>
+          </td>
+          <td class="ta-right actions">
+            <app-button
+              variant="primary"
+              size="sm"
+              [loading]="row.busy === 'fix'"
+              [disabled]="!!row.busy || !!targetError(row)"
+              (click)="fix(row)"
+            >
+              Corrigir
+            </app-button>
+            <app-button
+              variant="outline"
+              size="sm"
+              [loading]="row.busy === 'keep'"
+              [disabled]="!!row.busy"
+              (click)="keep(row)"
+            >
+              Manter
+            </app-button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</app-data-state>

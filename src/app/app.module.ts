@@ -25,6 +25,7 @@ import { PromptComponent } from './shared/prompt/prompt.component';
 import { SkeletonComponent } from './shared/skeleton/skeleton.component';
 import { StatusBadgeComponent } from './shared/status-badge/status-badge.component';
 import { ToastContainerComponent } from './shared/toast/toast-container.component';
+import { TypoReviewComponent } from './shared/typo-review/typo-review.component';
 
 import { adminGuard, authGuard, superadminGuard, tenantGuard } from './guards/auth.guard';
 import { TokenInterceptor } from './services/token.interceptor';
@@ -98,6 +99,7 @@ registerLocaleData(localePt);
     PromptComponent,
     CsvImportComponent,
     ImportDockComponent,
+    TypoReviewComponent,
     LoginComponent,
     InviteComponent,
     DashboardComponent,

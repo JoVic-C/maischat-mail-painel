@@ -174,11 +174,18 @@
                 <td class="muted">{{ c.company || '—' }}</td>
                 <td><app-status-badge kind="contact" [value]="c.status"></app-status-badge></td>
                 <td>
-                  <app-status-badge
-                    *ngIf="c.verification; else naoVerificado"
-                    kind="verification"
-                    [value]="c.verification.status"
-                  ></app-status-badge>
+                  <div class="verify-cell" *ngIf="c.verification; else naoVerificado">
+                    <app-status-badge
+                      kind="verification"
+                      [value]="c.verification.status"
+                      [hint]="resultReason(c.verification.result)"
+                    ></app-status-badge>
+                    <span
+                      class="verify-tag"
+                      *ngIf="resultTag(c.verification.result) as tag"
+                      [title]="resultReason(c.verification.result)"
+                    >{{ tag }}<ng-container *ngIf="c.verification.suggestion as s"> → &#64;{{ s }}</ng-container></span>
+                  </div>
                   <ng-template #naoVerificado><span class="muted" title="Ainda não verificado">—</span></ng-template>
                 </td>
                 <td class="muted">{{ c.lastDeliveredAt ? '✓ ' + (c.lastDeliveredAt | date: 'dd/MM/yyyy') : '—' }}</td>

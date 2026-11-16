@@ -1,0 +1,75 @@
+:host { display: block; }
+
+.intro { margin-bottom: 14px; }
+
+.summary { font-size: 12.5px; color: var(--t2); margin: 0 0 10px; font-variant-numeric: tabular-nums; }
+
+.review td { vertical-align: middle; }
+.review th { white-space: nowrap; }
+.review tbody tr {
+  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+}
+.review tbody tr.leaving { opacity: 0; transform: translateX(12px); }
+.review tbody tr[aria-busy='true'] { background: var(--oxl); }
+
+.wrong {
+  font-weight: 600;
+  color: var(--r);
+  text-decoration: line-through;
+  text-decoration-color: rgba(214, 48, 49, 0.45);
+  white-space: nowrap;
+}
+.count { font-variant-numeric: tabular-nums; }
+
+.target {
+  display: flex;
+  align-items: center;
+  min-width: 170px;
+  border: 1px solid var(--br);
+  border-radius: 8px;
+  background: var(--c);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.target:focus-within { border-color: var(--o); box-shadow: 0 0 0 3px var(--ol); }
+.target.is-invalid { border-color: var(--r); }
+.target .at { padding-left: 10px; color: var(--g50); font-weight: 600; }
+.target input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 8px 10px 8px 2px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--gnd);
+  outline: none;
+}
+
+.actions { white-space: nowrap; }
+.actions app-button + app-button { margin-left: 6px; }
+
+.count-unit { display: none; }
+
+/* No celular cada domínio vira um cartão: a tabela de 4 colunas esconderia as ações. */
+@media (max-width: 640px) {
+  .review thead { display: none; }
+  .review, .review tbody { display: block; }
+  .review tbody tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--br);
+  }
+  .review td { display: block; padding: 0; border: 0; text-align: left; }
+  .review td.count { text-align: right; color: var(--t2); }
+  .review td.target-cell, .review td.actions { grid-column: 1 / -1; }
+  .count-unit { display: inline; }
+  .review td.actions { display: flex; gap: 8px; white-space: normal; }
+  .actions app-button + app-button { margin-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .review tbody tr { transition: none; }
+}

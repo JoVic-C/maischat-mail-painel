@@ -8,6 +8,16 @@
   </div>
 </div>
 
+<section class="typo-banner" *ngIf="typoSummary as t" role="status" aria-live="polite">
+  <span class="typo-icon" aria-hidden="true">⚠</span>
+  <p>
+    <b>{{ t.domains | number }} {{ t.domains === 1 ? 'domínio' : 'domínios' }}</b> com possível erro de digitação
+    ({{ t.contacts | number }} {{ t.contacts === 1 ? 'contato' : 'contatos' }}), como &#64;gail.com no lugar de
+    &#64;gmail.com. Esses contatos ficam fora das campanhas até você revisar.
+  </p>
+  <app-button variant="primary" size="sm" (click)="openTypoReview()">Revisar domínios</app-button>
+</section>
+
 <div class="card filters">
   <input
     class="search"
@@ -83,7 +93,17 @@
                 [attr.aria-label]="'Selecionar ' + c.email"
               />
             </td>
-            <td class="email">{{ c.email }}</td>
+            <td class="email">
+              {{ c.email }}
+              <span
+                class="typo-tag"
+                *ngIf="isTypoSuspect(c)"
+                title="Possível erro de digitação no domínio: fica fora das campanhas até a revisão"
+              >
+                Erro de digitação?
+                <ng-container *ngIf="c.verification?.suggestion as s">→ &#64;{{ s }}</ng-container>
+              </span>
+            </td>
             <td>{{ c.name || '—' }}</td>
             <td class="muted">{{ c.company || '—' }}</td>
             <td><app-status-badge kind="contact" [value]="c.status"></app-status-badge></td>
@@ -124,6 +144,14 @@
         [class.is-invalid]="serverErrors.has('email')"
       />
       <div class="field-error" *ngIf="fieldError('email')">{{ fieldError('email') }}</div>
+      <div class="typo-hint" *ngIf="emailSuggestion" role="status" aria-live="polite">
+        <span>Você quis dizer <b>{{ emailSuggestion }}</b>?</span>
+        <span class="typo-actions">
+          <button type="button" class="link" (click)="useSuggestion()">Usar este</button>
+          <button type="button" class="link soft" (click)="keepTypedEmail()">Manter como digitei</button>
+        </span>
+      </div>
+      <div class="hint sub" *ngIf="keepEmail">Mantido como digitado.</div>
     </div>
 
     <div class="rw">
@@ -159,6 +187,17 @@
   <ng-container modal-actions>
     <app-button variant="outline" (click)="modal = false">Cancelar</app-button>
     <app-button variant="primary" [loading]="saving" (click)="save()">Salvar</app-button>
+  </ng-container>
+</app-modal>
+<app-modal
+  *ngIf="typoModal"
+  title="Domínios com possível erro de digitação"
+  size="lg"
+  (close)="closeTypoReview()"
+>
+  <app-typo-review (changed)="load()"></app-typo-review>
+  <ng-container modal-actions>
+    <app-button variant="outline" (click)="closeTypoReview()">Fechar</app-button>
   </ng-container>
 </app-modal>
 <app-modal

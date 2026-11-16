@@ -88,6 +88,11 @@
     <div class="stat"><div class="v soft">{{ ignoredCount | number }}</div><div class="k">⏭️ Ignorados</div></div>
     <div class="stat"><div class="v bad">{{ counters.invalid | number }}</div><div class="k">❌ Incorretos</div></div>
   </div>
+  <p class="hint warn" *ngIf="counters.typo" role="status">
+    ⚠ {{ counters.typo | number }} {{ counters.typo === 1 ? 'contato novo' : 'contatos novos' }} com possível erro de
+    digitação no domínio (ex.: &#64;gail.com). {{ counters.typo === 1 ? 'Entra marcado e fica' : 'Entram marcados e ficam' }}
+    fora das campanhas até a revisão em <b>Contatos › Revisar domínios</b>.
+  </p>
   <div class="ff live" *ngIf="phase === 'validating' || phase === 'done'">
     <label>Primeiros contatos do arquivo</label>
     <div class="live-box">
